@@ -9,7 +9,7 @@
 <meta name="generator" content="pandoc" />
 
 
-<meta name="author" content="第 0 組" />
+<meta name="author" content="第 3 組" />
 
 
 <title>AS3-1: 數位偵探</title>
@@ -234,8 +234,8 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">AS3-1: 數位偵探</h1>
-<h4 class="author"><em>第 0 組</em></h4>
-<h4 class="date"><em>2019-03-06 16:10:30</em></h4>
+<h4 class="author"><em>第 3 組</em></h4>
+<h4 class="date"><em>2019-03-06 16:40:09</em></h4>
 
 </div>
 
@@ -244,17 +244,17 @@ $(document).ready(function () {
 <p>犯罪是一個國際關注的問題，但它在不同的國家以不同的方式記錄和處理。 在美國，聯邦調查局（FBI）記錄了暴力犯罪和財產犯罪。 此外，每個城市都記錄了犯罪行為，一些城市發布了有關犯罪率的數據。 伊利諾伊州芝加哥市從2001年開始在線發布犯罪數據。</p>
 <p>芝加哥是美國人口第三多的城市，人口超過270萬。在這個作業裡面，我們將關注一種特定類型的財產犯罪，稱為「汽車盜竊」，我們將使用R中的一些基本數據分析來了解芝加哥的汽車盜竊紀錄。請載入文件“data/mvtWeek1.csv”：以下是各欄位的描述：</p>
 <ul>
-<li><code>ID</code>: a unique identifier for each observation</li>
-<li><code>Date</code>: the date the crime occurred</li>
-<li><code>LocationDescription</code>: the location where the crime occurred</li>
-<li><code>Arrest</code>: whether or not an arrest was made for the crime (TRUE if an arrest was made, and FALSE if an arrest was not made)</li>
-<li><code>Domestic</code>: whether or not the crime was a domestic crime, meaning that it was committed against a family member (TRUE if it was domestic, and FALSE if it was not domestic)</li>
-<li><code>Beat</code>: the area, or “beat” in which the crime occurred. This is the smallest regional division defined by the Chicago police department.</li>
-<li><code>District</code>: the police district in which the crime occured. Each district is composed of many beats, and are defined by the Chicago Police Department.</li>
-<li><code>CommunityArea</code>: the community area in which the crime occurred. Since the 1920s, Chicago has been divided into what are called “community areas”, of which there are now 77. The community areas were devised in an attempt to create socially homogeneous regions.</li>
-<li><code>Year</code>: the year in which the crime occurred.</li>
-<li><code>Latitude</code>: the latitude of the location at which the crime occurred.</li>
-<li><code>Longitude</code>: the longitude of the location at which the crime occurred.</li>
+<li><code>ID</code>: a unique identifier for each observation 每個觀察者的識別碼</li>
+<li><code>Date</code>: the date the crime occurred 犯罪發生的日期</li>
+<li><code>LocationDescription</code>: the location where the crime occurred 犯罪發生的地點</li>
+<li><code>Arrest</code>: whether or not an arrest was made for the crime (TRUE if an arrest was made, and FALSE if an arrest was not made) 犯罪者是否被逮捕</li>
+<li><code>Domestic</code>: whether or not the crime was a domestic crime, meaning that it was committed against a family member (TRUE if it was domestic, and FALSE if it was not domestic) 這個犯罪是否發生在國內</li>
+<li><code>Beat</code>: the area, or “beat” in which the crime occurred. This is the smallest regional division defined by the Chicago police department. 犯罪地理位置(以警察局定義的最小範圍)</li>
+<li><code>District</code>: the police district in which the crime occured. Each district is composed of many beats, and are defined by the Chicago Police Department. 犯罪發生的行政區(較高層級的地理位置代碼)</li>
+<li><code>CommunityArea</code>: the community area in which the crime occurred. Since the 1920s, Chicago has been divided into what are called “community areas”, of which there are now 77. The community areas were devised in an attempt to create socially homogeneous regions. 犯罪發生的社區(最高層級的地理位置代碼)</li>
+<li><code>Year</code>: the year in which the crime occurred. 犯罪發生的年份</li>
+<li><code>Latitude</code>: the latitude of the location at which the crime occurred. 犯罪發生的緯度</li>
+<li><code>Longitude</code>: the longitude of the location at which the crime occurred. 犯罪發生的經度</li>
 </ul>
 <p><br></p>
 <hr />
@@ -324,7 +324,7 @@ $(document).ready(function () {
 <p>【4.2】 How many observations are in Top5?</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#</span></code></pre></div>
 <p>【4.3】 One of the locations has a much higher arrest rate than the other locations. Which is it?</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># </span></code></pre></div>
 <p>【4.4】 On which day of the week do the most motor vehicle thefts at gas stations happen?</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#</span></code></pre></div>
 <p>【4.5】 On which day of the week do the fewest motor vehicle thefts in residential driveways happen?</p>
