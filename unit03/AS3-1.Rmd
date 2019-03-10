@@ -167,7 +167,7 @@ table(format(ts,'%u')) %>% sort(decr=T) #Friday
 
 【2.5】 Which month has the largest number of motor vehicle thefts for which an arrest was made?
 ```{r}
-ts[M$Arrest] == ts[M$Arrest==T]
+# ts[M$Arrest] == ts[M$Arrest==T]
 ts[M$Arrest] %>% format('%m') %>% table %>% sort(decr=T) #January
 ```
 + 索引的時候使用布林向量可以默認為TRUE的欄位
