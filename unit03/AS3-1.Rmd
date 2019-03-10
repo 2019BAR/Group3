@@ -1,6 +1,6 @@
 ---
 title: "AS3-1: 數位偵探"
-author: "第 0 組"
+author: "第 3 組 王欣"
 date: "`r Sys.time()`"
 output: 
   html_document:
@@ -44,27 +44,37 @@ pacman::p_load(dplyr, d3heatmap)
 
 ###  Section-1 Loading the Data
 
+載入資料 
+```{r}
+M <- read.csv("data/mvtWeek1.csv",stringsAsFactors=F) #不把character轉成factor
+```
+
+
 【1.1】How many rows of data (observations) are in this dataset?
 ```{r}
-#
+nrow(M)
+# 191641 樣本數
 ```
 
 檢查各欄位的資料格式
 ```{r}
-#
+summary(M)
+str(M)
 ```
 
 類別(Factor) versus 字串(Character)
 
 【1.2】How many variables are in this dataset?
 ```{r}
-#
+ncol(M)
+# 11個變數
 ```
 
 
 【1.3】Using the "max" function, what is the maximum value of the variable "ID"?
 ```{r}
-#
+max(M$ID)
+# 9181151
 ```
 
 
