@@ -1,6 +1,6 @@
 ---
 title: "AS3-1: 數位偵探"
-author: "第 3 組 "
+author: "第 3 組 王欣"
 date: "`r Sys.time()`"
 output: 
   html_document:
@@ -19,6 +19,10 @@ options(scipen=20, digits=4, width=90)
 #
 if(!require(pacman)) install.packages("pacman")
 pacman::p_load(dplyr, d3heatmap)
+#載入工具
+library(dplyr)
+library(d3heatmap)
+library(ggplot2)
 ```
 <hr>
 
@@ -60,6 +64,7 @@ nrow(M)
 ```{r}
 summary(M)
 str(M)
+lapply(D,class)  #三種可以知道資料格式的方法
 ```
 
 類別(Factor) versus 字串(Character)
@@ -80,18 +85,24 @@ max(M$ID)
 
 【1.4】 What is the minimum value of the variable "Beat"?
 ```{r}
-#
+min(M$Beat)
+#111
 ```
 
 
 【1.5】 How many observations have value TRUE in the Arrest variable (this is the number of crimes for which an arrest was made)?
 ```{r}
-#
+sum(M$Arrest)
+#15536
 ```
 
 【1.6】 How many observations have a LocationDescription value of ALLEY?
 ```{r}
-#
+sum(M$LocationDescription=="ALLEY")
+#2308個
+mean(M$LocationDescription=="ALLEY")
+#0.01204335 的比例
+2308/191641
 ```
 
 
@@ -109,41 +120,57 @@ max(M$ID)
 + Hour:Minute Day/Month/Year
 
 ```{r}
-#
+M$Date %>% head()
+# Month/Day/Year Hour:Minute
 ```
 
 ```{r}
-#
+ts = as.POSIXct(M$Date, format="%m/%d/%y %H:%M") #Date格式本來是“字串”，要轉換成時間資料格式
+par(cex=0.7)
+ggplot(M,aes(x=format(ts,'%y')))+
+  geom_histogram(stat="count",fill="#C89EC4") #第一張圖
+
+hist(ts,"year",las=2,freq=T,xlab="") #第二張圖，las = 2 讓文字與座標軸平行。
 ```
 
 ```{r}
-#
+table(format(ts,'%w'))
+table(format(ts,'%m'))
+table(weekday=format(ts,'%w'), month=format(ts,'%m'))  #%w的格式是0~6；%u的格式是1~7
 ```
 
 ```{r fig.height=2.5, fig.width=8}
-#
+table(format(ts,"%u"), format(ts,"%H")) %>% 
+  as.data.frame.matrix %>% 
+  d3heatmap(F,F,col=colorRamp(c('seagreen','lightyellow','red'))) #(F,F)隱藏X,Y的分支
 ```
 
 
 【2.2】 What is the month and year of the median date in our dataset? 
 ```{r}
-#
+median(M$Date)
+class(M$Date) 
+median(ts)
+#April/2009
 ```
++ 兩者的答案不一樣是因為Date的資料還沒識別成正確格式
 
 【2.3】 In which month did the fewest motor vehicle thefts occur?
 ```{r}
-#
+table(format(ts,'%m')) %>% sort() #Febuary
 ```
 
 【2.4】 On which weekday did the most motor vehicle thefts occur?
 ```{r}
-#
+table(format(ts,'%u')) %>% sort(decr=T) #Friday
 ```
 
 【2.5】 Which month has the largest number of motor vehicle thefts for which an arrest was made?
 ```{r}
-#
+ts[M$Arrest] == ts[M$Arrest==T]
+ts[M$Arrest] %>% format('%m') %>% table %>% sort(decr=T) #January
 ```
++ 索引的時候使用布林向量可以默認為TRUE的欄位
 
 <br><br>
 
@@ -153,27 +180,48 @@ max(M$ID)
 
 【3.1】 (a) In general, does it look like crime increases or decreases from 2002 - 2012? (b) In general, does it look like crime increases or decreases from 2005 - 2008? (c) In general, does it look like crime increases or decreases from 2009 - 2011?
 ```{r}
-#
-```
+ggplot(M,aes(x=format(ts,'%y')))+
+  geom_histogram(stat="count",fill="#EE7785")
 
-【3.2】 Does it look like there were more crimes for which arrests were made in the first half of the time period or the second half of the time period?
-```{r}
-#
+hist(ts,'year',las=2)
 ```
++ a.在2002-2012之間整體看來是減少的趨勢
++ b.在2005-2008之間是持續減少
++ c.在2009-2011之間是持續增加
+
+【3.2】 Does it look like there were more crimes for which arrests were made in the first half of the time period or the second half of the time period? 
+```{r}
+range(M$Date) %>% as.POSIXct(format="%m/%d/%y %H:%M") %>% diff()
+
+table(ts[M$Arrest] > as.POSIXct("2006-10-31"))
+```
++ 以有逮捕的情況下，前半段犯罪數大於後半段
 
 【3.3】 For what proportion of motor vehicle thefts in 2001 was an arrest made?
 ```{r}
-#
+M$Arrest[format(ts,'%Y')=="2001"] %>% mean() %>% round(3)
+M$Arrest[M$Year=="2001"] %>% mean() %>% round(3)
+
+table(M$Arrest, format(ts,'%Y')) %>% prop.table(2) %>% round(3) #0.104
 ```
++ margin = 設定為1只計算列，設定為2只計算欄，預設值NULL欄與列都會計算
+
 
 【3.4】 For what proportion of motor vehicle thefts in 2007 was an arrest made?
 ```{r}
-#
+M$Arrest[format(ts,'%Y')=="2007"] %>% mean() %>% round(3)
+M$Arrest[M$Year=="2007"] %>% mean() %>% round(3)
+
+table(M$Arrest, format(ts,'%Y')) %>% prop.table(2) %>% round(3) #0.085
+
 ```
 
 【3.5】 For what proportion of motor vehicle thefts in 2012 was an arrest made?
 ```{r}
-#
+M$Arrest[format(ts,'%Y')=="2012"] %>% mean() %>% round(3)
+M$Arrest[M$Year=="2012"] %>% mean() %>% round(3)
+
+table(M$Arrest, format(ts,'%Y')) %>% prop.table(2) %>% round(3) #0.039
 ```
 
 <br><br>
@@ -185,27 +233,31 @@ max(M$ID)
 【4.1】 Which locations are the top five locations for motor vehicle thefts, excluding the "Other" category? You should select 5 of the following options.
 
 ```{r}
-#
+table(M$LocationDescription) %>% sort(decr=T) %>% head(6)
 ```
 
 【4.2】 How many observations are in Top5?
 ```{r}
-#
+top5 <- M$LocationDescription %>% table %>% sort(decr=T) %>% names %>% head(6) %>% .[-3]
+sum(M$LocationDescription %in% top5) #177510
 ```
 
 【4.3】 One of the locations has a much higher arrest rate than the other locations. Which is it? 
 ```{r}
-# 
+TOP5 = subset(M, LocationDescription %in% top5)
+tapply(TOP5$Arrest, TOP5$LocationDescription, mean) %>% sort(decr=T)
 ```
 
 【4.4】 On which day of the week do the most motor vehicle thefts at gas stations happen?
 ```{r}
-#
+table(M$LocationDescription=="GAS STATION",format(ts,'%u')) 
+ts[M$Location == "GAS STATION"] %>% format('%w') %>% table %>% sort(decr=T)
 ```
 
 【4.5】 On which day of the week do the fewest motor vehicle thefts in residential driveways happen?
 ```{r}
-#
+table(M$LocationDescription=="DRIVEWAY - RESIDENTIAL",format(ts,'%u')) 
+ts[M$Location == "DRIVEWAY - RESIDENTIAL"] %>% format('%w') %>% table %>% sort()
 ```
 
 
