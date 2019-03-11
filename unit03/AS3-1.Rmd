@@ -56,8 +56,8 @@ M <- read.csv("data/mvtWeek1.csv",stringsAsFactors=F) #不把character轉成fact
 
 【1.1】How many rows of data (observations) are in this dataset?
 ```{r}
-nrow(M)
-# 191641 樣本數
+nrow(M)# 191641 樣本數
+
 ```
 
 檢查各欄位的資料格式
@@ -71,37 +71,37 @@ lapply(D,class)  #三種可以知道資料格式的方法
 
 【1.2】How many variables are in this dataset?
 ```{r}
-ncol(M)
-# 11個變數
+ncol(M) # 11個變數
+
 ```
 
 
 【1.3】Using the "max" function, what is the maximum value of the variable "ID"?
 ```{r}
-max(M$ID)
-# 9181151
+max(M$ID) # 9181151
+
 ```
 
 
 【1.4】 What is the minimum value of the variable "Beat"?
 ```{r}
-min(M$Beat)
-#111
+min(M$Beat) #111
+
 ```
 
 
 【1.5】 How many observations have value TRUE in the Arrest variable (this is the number of crimes for which an arrest was made)?
 ```{r}
-sum(M$Arrest)
-#15536
+sum(M$Arrest) #15536
+
 ```
 
 【1.6】 How many observations have a LocationDescription value of ALLEY?
 ```{r}
-sum(M$LocationDescription=="ALLEY")
-#2308個
-mean(M$LocationDescription=="ALLEY")
-#0.01204335 的比例
+sum(M$LocationDescription=="ALLEY") #2308個
+
+mean(M$LocationDescription=="ALLEY") #0.01204335 的比例
+
 2308/191641
 ```
 
@@ -120,8 +120,8 @@ mean(M$LocationDescription=="ALLEY")
 + Hour:Minute Day/Month/Year
 
 ```{r}
-M$Date %>% head()
-# Month/Day/Year Hour:Minute
+M$Date %>% head() # Month/Day/Year Hour:Minute
+
 ```
 
 ```{r}
@@ -150,8 +150,8 @@ table(format(ts,"%u"), format(ts,"%H")) %>%
 ```{r}
 median(M$Date)
 class(M$Date) 
-median(ts)
-#April/2009
+median(ts) #April/2009
+
 ```
 + 兩者的答案不一樣是因為Date的資料還沒識別成正確格式
 
@@ -263,4 +263,71 @@ ts[M$Location == "DRIVEWAY - RESIDENTIAL"] %>% format('%w') %>% table %>% sort()
 
 <br><br><br>
 
+<style>
+.caption {
+  color: #777;
+  margin-top: 10px;
+}
+p code {
+  white-space: inherit;
+  
+}
+pre {
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1;
+}
+pre code {
+  white-space: inherit;
+}
+p,li {
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
 
+.r{
+  line-height: 1.2;
+}
+
+title{
+  color: #cc0000;
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
+
+body{
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
+
+h1,h2,h3,h4,h5{
+  color: #330867;
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+  background-size: 150px
+ }
+
+h3{
+  color: #b36b00;
+  background: #ffe0b3;
+  line-height: 2;
+  font-weight: bold;
+}
+
+h5{
+  color: #006000;
+  background: #ffffe0;
+  line-height: 2;
+  font-weight: bold;
+}
+
+
+em{
+  color: #0000c0;
+
+  }
+strong{
+  font-size:24px;
+  
+}
+h4{
+ font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+ font-style:normal
+}
+</style>
