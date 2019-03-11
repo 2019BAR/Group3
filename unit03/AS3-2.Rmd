@@ -59,8 +59,8 @@ Boeing <- read.csv("data/BoeingStock.csv",stringsAsFactors = F)
 
 __§ 1.1__ Our five datasets all have the same number of observations. How many observations are there in each data set?
 ```{r}
-nrow(IBM)
-#480
+nrow(IBM)#480
+
 ```
 
 
@@ -112,10 +112,10 @@ sd(ProcterGamble$StockPrice) #18.19
 
 __§ 2.1__ Around what year did Coca-Cola has its highest stock price in this time period? Around what year did Coca-Cola has its lowest stock price in this time period?
 ```{r}
-CocaCola$Date[which.max(CocaCola$StockPrice)]
-#1972
-CocaCola$Date[which.min(CocaCola$StockPrice)]
-#1980
+CocaCola$Date[which.max(CocaCola$StockPrice)]#1972
+
+CocaCola$Date[which.min(CocaCola$StockPrice)]#1980
+
 
 plot(CocaCola$Date, CocaCola$StockPrice, type='l')  
 abline(v=CocaCola$Date[which.max(CocaCola$StockPrice)], col='green')
@@ -203,8 +203,8 @@ __§ 3.4__ In the last two years of this time period (2004 and 2005) which stock
 
 __§ 4.1__ For IBM, compare the monthly averages to the overall average stock price. In which months has IBM historically had a higher stock price (on average)? Select all that apply.
 ```{r}
-tapply(IBM$StockPrice, format(IBM$Date,"%m"), mean) - mean(IBM$StockPrice)
-#January,Febuary,March,April,May
+tapply(IBM$StockPrice, format(IBM$Date,"%m"), mean) - mean(IBM$StockPrice)#January,Febuary,March,April,May
+
 ```
 
 __§ 4.2__ General Electric and Coca-Cola both have their highest average stock price in the same month. Which month is this?
@@ -221,4 +221,70 @@ __§ 4.3__ For the months of December and January, every company's average stock
 ```
 
 <br><br><br>
+<style>
+.caption {
+  color: #777;
+  margin-top: 10px;
+}
+p code {
+  white-space: inherit;
+}
+pre {
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1;
+}
+pre code {
+  white-space: inherit;
+}
+p,li {
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
 
+.r{
+  line-height: 1.2;
+}
+
+title{
+  color: #cc0000;
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
+
+body{
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
+
+h1,h2,h3,h4,h5{
+  color: #330867;
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+  background-size: 150px
+ }
+
+h3{
+  color: #b36b00;
+  background: #ffe0b3;
+  line-height: 2;
+  font-weight: bold;
+}
+
+h5{
+  color: #006000;
+  background: #ffffe0;
+  line-height: 2;
+  font-weight: bold;
+}
+
+
+em{
+  color: #0000c0;
+
+  }
+strong{
+  font-size:24px;
+  
+}
+h4{
+  font-family:DFKai-sb;
+  font-style:normal
+}
+</style>
