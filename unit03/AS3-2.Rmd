@@ -284,7 +284,7 @@ strong{
   
 }
 h4{
-  font-family:DFKai-sb;
+ font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
   font-style:normal
 }
 </style>
