@@ -1,6 +1,6 @@
 ---
 title: "AS3-2: 股市動態"
-author: "第 3 組 王欣"
+author: "第 3 組 黃柏勳 劉漢慈 王誠歆 李燦宇 張延瑋 王欣"
 date: "`r Sys.time()`"
 output:
   html_document:
