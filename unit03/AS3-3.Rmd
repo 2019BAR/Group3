@@ -45,48 +45,54 @@ pacman::p_load(dplyr)
 
 ###  Section-1 Loading and Summarizing the Dataset
 
+載入資料
+```{r}
+Country <- read.csv("data/CountryCodes.csv",stringsAsFactors = F)
+Metro <- read.csv("data/MetroAreaCodes.csv",stringsAsFactors = F)
+CPS <- read.csv("data/CPSData.csv",stringsAsFactors = F)
+```
+
+
 __§ 1.1__ How many interviewees are in the dataset?
 ```{r}
-#
-#
+#131302
+nrow(CPS)
 ```
 
 __§ 1.2__ Among the interviewees with a value reported for the Industry variable, what is the most common industry of employment? Please enter the name exactly how you see it.
 ```{r}
-#
-#
+#Educational and health services
+table(CPS$Industry) %>% sort(decr=T) %>% head()
 ```
 
 __§ 1.3__ Which state has the fewest interviewees?
 ```{r}
-#
-#
+#New Mexico
+table(CPS$State) %>% sort() %>% head()
 ```
 
 Which state has the largest number of interviewees?
 ```{r}
-#
-#
+#California
+table(CPS$State) %>% sort(decreasing = T) %>% head()
 ```
 
 __§ 1.4__ What proportion of interviewees are citizens of the United States?
 ```{r}
-#
-#
+#0.9422
+mean(CPS$Citizenship=="Citizen, Native"|CPS$Citizenship=="Citizen, Naturalized")
+CPS$Citizenship %>% table() %>% prop.table()
 ```
 
 __§ 1.5__ For which races are there at least 250 interviewees in the CPS dataset of Hispanic ethnicity? (Select all that apply.) 
 
 + American Indian
-+ Asian
 + cBlack
 + Multiracial
-+ Pacific Islander
 + White
 
 ```{r}
-#
-#
+table(CPS$Race,CPS$Hispanic) >250
 ```
 
 <br><br> 
@@ -97,25 +103,17 @@ __§ 1.5__ For which races are there at least 250 interviewees in the CPS datase
 
 __§ 2.1__ Which variables have at least one interviewee with a missing (NA) value? (Select all that apply.)
 
-+ PeopleInHousehold
-+ Region
-+ State
 + MetroAreaCode
-+ Age
 + Married
-+ Sex
 + Education
-+ Race
-+ Hispanic
-+ CountryOfBirthCode
-+ Citizenship
 + EmploymentStatus
 + Industry
 
 ```{r}
-#
-#
+summary(CPS)
+is.na(CPS) %>% colSums()
 ```
++ summary 無法在數字格式以外的變數判斷NA值
 
 __§ 2.2__  Which is the most accurate:
 
