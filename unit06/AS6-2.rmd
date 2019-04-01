@@ -17,12 +17,12 @@ knitr::opts_knit$set(global.par = TRUE)
 par(cex=0.8)
 options(scipen=20, digits=5, width=80)
 if(!require(pacman)) install.packages("pacman")
-#install.packages("epiDisplay")
+#install.packages("flexdashboard")
 ```
 <hr>
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
-pacman::p_load(dplyr, tidyr,flexdashboard,epiDisplay) #(安裝)載入套件
+pacman::p_load(dplyr, tidyr,flexdashboard) #(安裝)載入套件
 ```
 <hr>
 
@@ -189,23 +189,25 @@ probability
 ```
 
 
-```{r echo=F,fig.height=10/8}
+```{r echo=F,fig.height=1.25}
 D = faithful$waiting
 DEN = density(D, adjust = 0.5)
 PDF = approxfun(DEN$x, DEN$y, yleft=0, yright=0)
 PROB = integrate(PDF, 80, 90)$value  
-gauge(round(100*PROB), min = 0, max = 100, symbol = '%', gaugeSectors(
+library(flexdashboard)
+gauge(round(100*PROB,1), min = 0, max = 100, symbol = '%', gaugeSectors(
+      success = c(41, 100), warning = c(21, 40), danger = c(0, 20)) )
+```
+
+```{r echo=F,fig.height=1.25}
+W = faithful$waiting
+DEN = density(W, adjust = 1)
+PDF = approxfun(DEN$x, DEN$y, yleft=0, yright=0)
+PROB = integrate(PDF, 80, 90)$value  
+gauge(round(100*PROB,1), min = 0, max = 100, symbol = '%', gaugeSectors(
   success = c(41, 100), warning = c(21, 40), danger = c(0, 20)) ) 
 ```
 
-```{r echo=F,fig.height=10/8}
-D = faithful$waiting
-DEN = density(D, adjust = 1)
-PDF = approxfun(DEN$x, DEN$y, yleft=0, yright=0)
-PROB = integrate(PDF, 80, 90)$value  
-gauge(round(100*PROB), min = 0, max = 100, symbol = '%', gaugeSectors(
-  success = c(41, 100), warning = c(21, 40), danger = c(0, 20)) ) 
-```
 
 <br><hr>
 
