@@ -1,0 +1,246 @@
+---
+title: AS6-2 資料案例：老忠實
+author: 第三組 王欣
+date: "`r Sys.time()`"
+output: 
+  html_document:
+    highlight: pygments
+    theme: flatly
+    css: style_hsin.css
+---
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# 這些程式碼設定網頁的格式，並安裝、載入一些基本的套件，請大家不要去改動<br>
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=5, width=80)
+if(!require(pacman)) install.packages("pacman")
+#install.packages("epiDisplay")
+```
+<hr>
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+pacman::p_load(dplyr, tidyr,flexdashboard,epiDisplay) #(安裝)載入套件
+```
+<hr>
+
+<img src="old-faithful.jpg" style="display:block; margin:auto; width:50%;">
+
+**作業摘要：** 利用案例來加強統計概念與實務操作
+
+* 利用老忠實噴泉案例的等待時間
+    + 折線圖 累積機率
+    + 直方圖 分布
+
+* 資料處理(dplyr)與繪圖套件
+    + `dplyr`
+    + `tidyr`
+<br>
+
+
+
+####資料檢視
+
+* 老忠實的資料中有兩個欄位
+    + 噴發時間
+    + 等待時間
+
+```{r}
+E = faithful$eruptions  # copy to a short name
+W = faithful$waiting 
+summary(W)
+length(W)
+```
+
+
+### 【A】The Ascomebe Quartet
+
+####Frame
+```{r}
+###
+plot(0,0,xlim=c(42,97),ylim=c(0,1.1),xlab="等待時間(分鐘)", 
+     ylab="密度 or (累計)機率", main="分布、機率與密度")
+abline(h=1, col='lightgray', lwd=0.25, lty=2) 
+
+### Empirical PDF
+rug(W) #在有變數值的地方做標記 as pulse FUN
+
+### Empirical CDF
+plot(ecdf(W), cex=0, verticals=T, lwd=2, col='darkgray', add=T) #add是不要再畫一張新的圖
+
+### Histogram PDF
+Bins = 20                             # no. bins畫多少欄，調欄數的時候不要有一隻特高的情況會是比較好的
+bx = seq(min(W), max(W), length=Bins+1) # break sequence 
+hist(W, col="#B3FFFF7F", border="white", ylim=c(0,1.1),
+     freq=F,breaks=bx,  add=T)  #最後三個重要的參數：設定機率密度,並給予界線，添加圖上去
+abline(h=0, col='lightgray', lwd=0.25)
+
+### Histogram CDF
+adj = (bx[2] - bx[1])/2
+steps = stepfun(bx-adj, c(0, sapply(bx, function(b) mean(W <= b))))
+plot(steps, cex=0, col='#33CC337F', lwd=3, lty=1, add=T)
+
+### Smooth PDF
+Adjust = 1    # bandwidth adjustment
+DEN = density(W, adjust = Adjust)
+lines(DEN, col='gold', lwd=3)
+
+### Smooth CDF
+PDF = approxfun(DEN$x, DEN$y, yleft=0, yright=0)
+x = seq(min(W), max(W),0.1)  
+y = sapply(x, function(i) integrate(PDF, -Inf, i)$value) #從無限大積分到i來當成CDF再畫成線
+lines(x, y, col='red', lwd=3, lty=2)
+
+### Mark Range
+x1 = 3.8; x2 = 4.8
+rect(x1,-0.1,x2,1.2,col= rgb(0,1,0,alpha=0.2),border=NA)
+```
+
+*把變數畫成平滑線，再把平滑線做成方程式
+
+#### Binomial distribution
+```{r}
+rbinom(1000000, 1000, 0.2) %>% hist(breaks=100,freq=F)
+curve(dnorm(x,mean=200,sd=sqrt(160)), col='red', lwd=2, add=T)
+```
+
+
+<p class="qiz">
+<span style="font-size:24px">`r "\U26F2"` 問題討論【A.選擇方法】：</span><br>
+&nbsp; ■ &nbsp; 我們為甚麼需要隨機變數？ 什麼時候我們需要用到隨機變數？<br>
+<font color="#f68787">&nbsp;透過隨機變數的結果我們可以觀察一個隨機試驗出現值的次數(機率密度)分布。</font><br>
+<font color="#f68787">&nbsp;當我們無法預知一個事件的結果可以透過隨機變數的模擬來預測結果，進一步產生策略觀點</font><br>
+&nbsp; ■ &nbsp; 隨機變數沒有固定的值，那我們要如何做計算呢？<br>
+<font color="#f68787">&nbsp;針對模擬的結果得到隨機變數值分布，透過適配一個恰當的機率分布可以去計算隨機變數的期望值及變異數</font><br>
+&nbsp; ■ &nbsp; 我們可以用直方圖或數值標記來估計噴發時間落在某一區間的機率嗎？<br>
+<font color="#f68787">&nbsp;可以透過直方圖計算某一區間的機率，機率 = 機率密度(density) × 欄寬(binwidth)</font><br>
+<font color="#f68787">&nbsp;數值標記的用意在於在有出現隨機變數值的位置標記，可以觀察密集程度來看出現頻率高低進而知道特定區間機率。</font><br>
+&nbsp; ■ &nbsp;直方圖(histogram)也可以當作一種模型嗎？ 數值標記(rug)呢？<br>
+<font color="#f68787">&nbsp;兩者皆是模型，模型是將現實抽象化(Abstract of Reality)，使其好懂(好溝通)或好計算。</font><br>
+<font color="#f68787">&nbsp;直方圖呈現的是機率密度，可透過圖表概讀及公式計算出某段機率；另外數值標記透過圖像方式可以讓資料簡略呈現真實資料的分布狀況，讓決策者更好識別。</font><br>
+&nbsp; ■ &nbsp;直方圖和平滑模型哪一個比較適合用來表示噴發時間的分布？ 為甚麼？<br>
+<font color="#f68787">&nbsp;平滑模型較適合，因為直方圖會因為欄寬設定不同而有較大的差異，而平滑模型直接表現各點下的機率密度更可以呈現噴發時間的分布</font><br>
+&nbsp; ■ &nbsp;用數值標記來預測噴發時間會比用直方圖「準」嗎？ 「準」是什麼意思呢？<br>
+<font color="#f68787">&nbsp;會，因為直方圖是在某區間下的機率分布，但數值標記是在準確值上，不論是在敘述現在的資料或是未來預測值都會有比較好的表現，準的定義類似是"準確"，對於預測值的差距不要太大。</font><br>
+</p class="qiz"><br>
+
+<hr>
+
+<p class="wiz">
+<span style="font-size:24px">`r "\U26F2"` 問題討論【B.調整參數】：</span><br>
+&nbsp; ■ &nbsp;你覺得最合適的直方圖欄數(support/binwidth)是？ 為甚麼？<br>
+<font color="#ff9a3c">&nbsp;在調整平滑模型頻寬(bandwidth)為0.5的情況下，我覺得直方圖欄數(support/binwidth)設定在16的時候，彼此呈現的誤差較小。另外平滑模型頻寬0.5不會過於複雜(overfitting);直方圖欄數設定在16下，各區間的機率密度函數也不會過於極端。</font><br>
+&nbsp; ■ &nbsp; 最合適的平滑模型頻寬(bandwidth)呢？<br>
+<font color="#ff9a3c">&nbsp;0.5</font><br>
+&nbsp; ■ &nbsp; 調高欄寬和頻寬會讓模型變複雜，還是變簡單呢？<br>
+<font color="#ff9a3c">&nbsp;直方圖欄數增加(shiny app參數操作)，會讓模型變複雜；但題目調高欄"寬"及頻寬，都會讓模型變得簡單。</font><br>
+&nbsp; ■ &nbsp;模型越複雜，它跟實際值之間的誤差是越大、還是越小？ 數值標記(rug)呢？<br>
+<font color="#ff9a3c">&nbsp;越複雜是為了更貼合實際值，所以誤差會越來越小，數值標記就是表現真實值所以沒有誤差。</font><br>
+&nbsp; ■ &nbsp;那麼，越複雜的模型就會越準，對嗎？<br>
+<font color="#ff9a3c">&nbsp;不一定，因為不確定未來的資料是否相近於現在資料的表現，若過於複雜也會造成過度適配的問題反而會有更大的誤差。</font><br>
+</p class="wiz"><br>
+
+<hr>
+
+<p class="eiz">
+<span style="font-size:24px">`r "\U26F2"` 問題討論【C.建立模型、估計機率】：</span><br>
+&nbsp; ■ &nbsp;從變數向量(D)求出機率密度曲線(DEN)<br>
+<font color="#74b49b">&nbsp;DEN = density(D, adjust = input`$`B)</font><br>
+&nbsp; ■ &nbsp; 將機率密度曲線(DEN)轉換成機率密度函數(PDF)<br>
+<font color="#74b49b">&nbsp;PDF = approxfun(DEN`$`x, DEN`$`y, yleft=0, yright=0)</font><br>
+&nbsp; ■ &nbsp; 對機率密度函數(PDF)做積分，算出機率(PROB)<br>
+<font color="#74b49b">&nbsp;PROB = integrate(PDF, input`$`R[1], input`$`R[2])`$`value</font><br>
+&nbsp; ■ &nbsp;將頻寬調整參數(adjust)設為1，算出「等待時間」落在80到90之間的機率<br>
+<font color="#74b49b">&nbsp;0.26851</font><br>
+&nbsp; ■ &nbsp;將頻寬調整參數設為0.5，算出等待時間落在80到90之間的機率<br>
+<font color="#74b49b">&nbsp;0.28275</font><br>
+&nbsp; ■ &nbsp;算出來的機率比較高的就是比較好的模型，對嗎？為甚麼？<br>
+<font color="#74b49b">&nbsp;調整adjust從1到0.5，其實就是在調整平滑模型頻寬來影響機率函數，而調低頻寬使得模型變得複雜，才讓平滑曲線下的面積更多，機率變高。但仍然不能確定是否為比較好的模型。</font><br>
+</p class="eiz"><br>
+
+**答案補充**
+```{r}
+D = faithful$waiting
+Adjust= c(0.5,1)
+probability = sapply(Adjust, function(x) {
+    DEN = density(D, adjust = x)
+    PDF = approxfun(DEN$x, DEN$y, yleft=0, yright=0)
+    PROB = integrate(PDF, 80, 90)$value
+  }) 
+probability
+```
+
+
+```{r echo=F,fig.height=10/8}
+D = faithful$waiting
+DEN = density(D, adjust = 0.5)
+PDF = approxfun(DEN$x, DEN$y, yleft=0, yright=0)
+PROB = integrate(PDF, 80, 90)$value  
+gauge(round(100*PROB), min = 0, max = 100, symbol = '%', gaugeSectors(
+  success = c(41, 100), warning = c(21, 40), danger = c(0, 20)) ) 
+```
+
+```{r echo=F,fig.height=10/8}
+D = faithful$waiting
+DEN = density(D, adjust = 1)
+PDF = approxfun(DEN$x, DEN$y, yleft=0, yright=0)
+PROB = integrate(PDF, 80, 90)$value  
+gauge(round(100*PROB), min = 0, max = 100, symbol = '%', gaugeSectors(
+  success = c(41, 100), warning = c(21, 40), danger = c(0, 20)) ) 
+```
+
+<p class="riz">
+<span style="font-size:24px">`r "\U26F2"` 問題討論【D.預測與決策】：</span><br>
+假設有一個賭局，你可以花30元選定一個連續60秒的時段，如果老忠實下一次的噴發時間落在你指定的區間，你就可以贏到100元；請你使用頻寬為0.5的平滑密度模型 …<br>
+&nbsp; ■ &nbsp;決定要不要參加這個賭局<br>
+<font color="#006c9a">&nbsp;要，因為期望值為17.7，這是一個傾向於獲利的賭局。</font><br>
+&nbsp; ■ &nbsp; 如果你參加的話，你要把噴發時間設定在哪一個區間呢？<br>
+<font color="#006c9a">&nbsp;設定在3.9-4.9(分鐘)</font><br>
+&nbsp; ■ &nbsp; 你設在這個區間的話，參加這個賭局的期望值是？<br>
+<font color="#006c9a">&nbsp;17.66</font><br>
+假如賭場老闆從零開始把每10秒鐘設為一個區間，每個區間的賭金是五塊錢 …<br>
+&nbsp; ■ &nbsp;你要怎麼押注，才能獲得最高的期望值呢？<br>
+<font color="#006c9a">&nbsp;由於問題未指名，</font><br>
+&nbsp; ■ &nbsp;將頻寬調整參數設為0.5，算出等待時間落在80到90之間的機率<br>
+<font color="#006c9a">&nbsp;0.28275</font><br>
+&nbsp; ■ &nbsp;算出來的機率比較高的就是比較好的模型，對嗎？為甚麼？<br>
+<font color="#006c9a">&nbsp;調整adjust從1到0.5，其實就是在調整平滑模型頻寬來影響機率函數，而調低頻寬使得模型變得複雜，才讓平滑曲線下的面積更多，機率變高。但仍然不能確定是否為比較好的模型。</font><br>
+</p class="eiz"><br>
+
+
+**答案補充**
+```{r}
+E = faithful$eruptions
+DEN = density(E, adjust = 0.5)
+PDF = approxfun(DEN$x, DEN$y, yleft=0, yright=0)
+prob = integrate(PDF,3.9,4.9)$value
+```
+
+####選擇一分鐘的區間
+```{r}
+x = seq(1, 6, .1)
+px = sapply(11:length(x), # start by 11, so i-10 = 1
+            function(i) integrate(PDF, x[i-10], x[i])$value)
+payoff = 100 * px - 30
+df = data.frame(x2=seq(2,6,.1), px, payoff) 
+df = df[order(-df$payoff),]  # order 是回傳位置，加負號是由大到小排，所以第21個是最大的報酬
+df$cumsum =  cumsum(df$payoff)
+df %>% head(14) #只顯示期望值為正的14個
+```
+
+####選擇十秒鐘的區間
+```{r}
+x = seq(1, 6, 1/6)
+px = sapply(2:length(x), # start by 2, so i-1 = 1
+            function(i) integrate(PDF, x[i-1], x[i])$value)
+payoff = 100 * px - 5
+df = data.frame(x2=x[-1], px, payoff) 
+df = df[order(-df$payoff),]  # order 是回傳位置，加負號是由大到小排，所以第21個是最大的報酬
+df$cumsum =  cumsum(df$payoff)
+df %>% head(9)  #只顯示期望值為正的9個
+```
+
+
+
