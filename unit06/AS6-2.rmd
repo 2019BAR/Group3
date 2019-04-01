@@ -1,6 +1,6 @@
 ---
-title: AS6-2 資料案例：老忠實
-author: 第三組 王欣
+title: AS6-2 資料案例：老忠實噴泉
+author: 第三組 黃柏勳 劉漢慈 王誠歆 李燦宇 張延瑋 王欣
 date: "`r Sys.time()`"
 output: 
   html_document:
@@ -28,38 +28,39 @@ pacman::p_load(dplyr, tidyr,flexdashboard,epiDisplay) #(安裝)載入套件
 
 <img src="old-faithful.jpg" style="display:block; margin:auto; width:50%;">
 
+<span style="font-size:24px">`r emo::ji("light_bulb")`</span>
 **作業摘要：** 利用案例來加強統計概念與實務操作
 
-* 利用老忠實噴泉案例的等待時間
-    + 折線圖 累積機率
-    + 直方圖 分布
+* 利用老忠實噴泉的等待時間製作
+    + 平滑曲線圖：機率密度函數(PDF)/累積機率密度函數(CDF)
+    + 直方圖：機率密度函數(PDF)/累積機率密度函數(CDF)
+
 
 * 資料處理(dplyr)與繪圖套件
     + `dplyr`
     + `tidyr`
 <br>
 
+<span style="font-size:24px">`r emo::ji("light_bulb")`</span>
+**資料檢視**
 
-
-####資料檢視
-
-* 老忠實的資料中有兩個欄位
+* R內建老忠實的資料中有兩個欄位
     + 噴發時間
     + 等待時間
 
 ```{r}
-E = faithful$eruptions  # copy to a short name
+E = faithful$eruptions  # 簡化資料名稱
 W = faithful$waiting 
 summary(W)
-length(W)
+length(W) # 資料共有272點
 ```
 
 
-### 【A】The Ascomebe Quartet
+### 【A】製作老忠實噴泉等待時間的PDF/CDF
 
 ####Frame
-```{r}
-###
+```{r fig.align='center'}
+### Basic settings
 plot(0,0,xlim=c(42,97),ylim=c(0,1.1),xlab="等待時間(分鐘)", 
      ylab="密度 or (累計)機率", main="分布、機率與密度")
 abline(h=1, col='lightgray', lwd=0.25, lty=2) 
@@ -94,18 +95,33 @@ y = sapply(x, function(i) integrate(PDF, -Inf, i)$value) #從無限大積分到i
 lines(x, y, col='red', lwd=3, lty=2)
 
 ### Mark Range
-x1 = 3.8; x2 = 4.8
-rect(x1,-0.1,x2,1.2,col= rgb(0,1,0,alpha=0.2),border=NA)
+x1 = 70; x2 = 90
+rect(x1,-0.1,x2,1.2,col= rgb(0,1,0,alpha=0.1),border=NA)
 ```
 
-*把變數畫成平滑線，再把平滑線做成方程式
-
+* 因為真實的概率分布函数未知，故以真實資料繪圖。
+* `ecdf()`函数中的e代表Empirical，意思是根據觀察值而來的，即具體描繪出來的CDF曲線根據各個數據點的總和而得到的。
+* 平滑曲線的累積機率函數(CDF)
+    + 設定頻寬並以資料點計算各隨機變數值下的機率密度
+    + 以`approxfun`來製作相對應的機率密度函數
+    + 把各點由負無窮大積分至該點，便可以計算出該點的累積機率
+    
+<hr>    
+### 【B】程式模擬 v.s 理論分布
+    
 #### Binomial distribution
-```{r}
+```{r fig.align='center'}
 rbinom(1000000, 1000, 0.2) %>% hist(breaks=100,freq=F)
 curve(dnorm(x,mean=200,sd=sqrt(160)), col='red', lwd=2, add=T)
 ```
 
+* 二項式分布
+    + 以每次試驗設定為成功機率0.2且抽取1000樣本數，並執行1000000次的模擬結果
+* 常態分布
+    + 畫出以平均值200,變異數160的常態分佈曲線(理論分布)
+* 由圖可以看出執行相當多次的二項式分布實驗下的抽樣結果會依據中央極限定理(CLT)收斂成常態分布。
+
+<hr>
 
 <p class="qiz">
 <span style="font-size:24px">`r "\U26F2"` 問題討論【A.選擇方法】：</span><br>
@@ -191,25 +207,37 @@ gauge(round(100*PROB), min = 0, max = 100, symbol = '%', gaugeSectors(
   success = c(41, 100), warning = c(21, 40), danger = c(0, 20)) ) 
 ```
 
+<br><hr>
+
 <p class="riz">
 <span style="font-size:24px">`r "\U26F2"` 問題討論【D.預測與決策】：</span><br>
 假設有一個賭局，你可以花30元選定一個連續60秒的時段，如果老忠實下一次的噴發時間落在你指定的區間，你就可以贏到100元；請你使用頻寬為0.5的平滑密度模型 …<br>
 &nbsp; ■ &nbsp;決定要不要參加這個賭局<br>
-<font color="#006c9a">&nbsp;要，因為期望值為17.7，這是一個傾向於獲利的賭局。</font><br>
-&nbsp; ■ &nbsp; 如果你參加的話，你要把噴發時間設定在哪一個區間呢？<br>
-<font color="#006c9a">&nbsp;設定在3.9-4.9(分鐘)</font><br>
-&nbsp; ■ &nbsp; 你設在這個區間的話，參加這個賭局的期望值是？<br>
-<font color="#006c9a">&nbsp;17.66</font><br>
+<font color="#006c9a">&nbsp;要，因為期望值為17.7(元)，這是一個傾向於獲利的賭局。</font><br>
+&nbsp; ■ &nbsp;如果你參加的話，你要把噴發時間設定在哪一個區間呢？<br>
+<font color="#183661">&nbsp;設定在3.9-4.9(分鐘)</font><br>
+&nbsp; ■ &nbsp;你設在這個區間的話，參加這個賭局的期望值是？<br>
+<font color="#006c9a">&nbsp;17.66，是本次賭局的最大獲利報酬。</font><br>
+<br>
 假如賭場老闆從零開始把每10秒鐘設為一個區間，每個區間的賭金是五塊錢 …<br>
 &nbsp; ■ &nbsp;你要怎麼押注，才能獲得最高的期望值呢？<br>
-<font color="#006c9a">&nbsp;由於問題未指名，</font><br>
-&nbsp; ■ &nbsp;將頻寬調整參數設為0.5，算出等待時間落在80到90之間的機率<br>
-<font color="#006c9a">&nbsp;0.28275</font><br>
-&nbsp; ■ &nbsp;算出來的機率比較高的就是比較好的模型，對嗎？為甚麼？<br>
-<font color="#006c9a">&nbsp;調整adjust從1到0.5，其實就是在調整平滑模型頻寬來影響機率函數，而調低頻寬使得模型變得複雜，才讓平滑曲線下的面積更多，機率變高。但仍然不能確定是否為比較好的模型。</font><br>
-</p class="eiz"><br>
-
-
+<font color="#006c9a">&nbsp;由於問題未指名確切的最大賭金，故本組設想兩種賭注方案：</font><br>
+<font color="#006c9a">&nbsp;方案一：呈上題(賭金30元)，選擇前獲利最大的六個區間如下：</font><br>
+<font color="#074684">&nbsp;&rArr;[`4.3333-4.5`]&frasl;[`4.5-4.6667`]&frasl;[`4.1666-4.3333`]&frasl;[`1.8333-2`]&frasl;[`4-4.1667`]&frasl;[`2-2.1667`]</font><br>
+<font color="#006c9a">&nbsp;方案二：假設賭金無上限，故以賭金45元下選擇選擇前獲利最大的前九個區間(因有九個區間期望值為正或機率大於臨界機率0.05)</font><br>
+<font color="#006c9a">&nbsp;除了上述六個區間的額外三個區間：</font><br>
+<font color="#074684">&nbsp;&rArr;[`4.6667-4.8333`]&frasl;[`1.6667-1.8333`]&frasl;[`3.8333-4`]</font><br>
+&nbsp; ■ &nbsp;你的賭金和期望值各是多少？<br>
+<font color="#006c9a">&nbsp;方案一：選擇六個區間，總獲得最大獲利報酬為20.2944(元)</font><br>
+<font color="#006c9a">&nbsp;方案二：選擇九個區間，總獲得最大獲利報酬為24.3380(元)</font><br>
+<br>
+將獲利的期望值和賭金的比值稱為「期望投資報酬率」 …<br>
+&nbsp; ■ &nbsp;「最大期望投資報酬率」和「最大期望報酬」的投資策略是一樣的嗎？<br>
+<font color="#006c9a">&nbsp;若以方案一來說，不論「最大期望投資報酬率」和「最大期望報酬」為目標，皆選擇投注十秒來加入賭局。</font><br>
+<font color="#006c9a">&nbsp;若以方案二來說，以「最大期望投資報酬率」目標下，會選擇投注一分鐘來獲得較高的投注效率；而「最大期望報酬」目標下則選擇投注十秒來加入賭局。</font><br>
+&nbsp; ■ &nbsp;你認為哪一個策略目標比較好呢？ 為什麼？<br>
+<font color="#006c9a">&nbsp;以相同賭本來說，本組認為每一分錢需發揮最大價值，故以「最大期望投資報酬率」為目標；若不受賭本限制下，應把手中的錢發揮最大價值，故以「最大期望報酬」為目標。</font><br>
+</p class="riz"><br>
 **答案補充**
 ```{r}
 E = faithful$eruptions
@@ -218,19 +246,18 @@ PDF = approxfun(DEN$x, DEN$y, yleft=0, yright=0)
 prob = integrate(PDF,3.9,4.9)$value
 ```
 
-####選擇一分鐘的區間
+*(1)選擇一分鐘的區間*
 ```{r}
 x = seq(1, 6, .1)
 px = sapply(11:length(x), # start by 11, so i-10 = 1
             function(i) integrate(PDF, x[i-10], x[i])$value)
 payoff = 100 * px - 30
 df = data.frame(x2=seq(2,6,.1), px, payoff) 
-df = df[order(-df$payoff),]  # order 是回傳位置，加負號是由大到小排，所以第21個是最大的報酬
+df = df[order(-df$payoff),]  # order 是回傳位置，加負號是由大到小排，所以第30個是最大的報酬
 df$cumsum =  cumsum(df$payoff)
 df %>% head(14) #只顯示期望值為正的14個
 ```
-
-####選擇十秒鐘的區間
+*(2)選擇十秒鐘的區間*
 ```{r}
 x = seq(1, 6, 1/6)
 px = sapply(2:length(x), # start by 2, so i-1 = 1
@@ -243,4 +270,19 @@ df %>% head(9)  #只顯示期望值為正的9個
 ```
 
 
+*方案一比較*
+
+|                      |   __一分鐘__   | __十秒(方案一)__ |
+|  ------------------  | ---------- | ------------ |
+|  __最大期望投資報酬率__  | `17.66/30=0.5887` | <font color="#c70039">__`20.2944/30=0.6765`__ |
+|   __最大期望報酬__       | `17.66` |    <font color="#c70039">__`20.2944`__     |
+
+*方案二比較*
+
+|                      |   __一分鐘__   | __十秒(方案二)__ |
+|  ------------------  | ---------- | ------------ |
+|  __最大期望投資報酬率__  | <font color="#c70039">__`17.66/30=0.5887`__ | `24.3380/45=0.5408` |
+|   __最大期望報酬__       | `17.66` |    <font color="#c70039">__`24.3380`__      |
+
+* 本組發現若時間區間切割較小，所獲得的總期望報酬會比較大。
 
