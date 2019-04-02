@@ -217,7 +217,7 @@ gauge(round(100*PROB,1), min = 0, max = 100, symbol = '%', gaugeSectors(
 &nbsp; ■ &nbsp;決定要不要參加這個賭局<br>
 <font color="#006c9a">&nbsp;要，因為期望值為17.7(元)，這是一個傾向於獲利的賭局。</font><br>
 &nbsp; ■ &nbsp;如果你參加的話，你要把噴發時間設定在哪一個區間呢？<br>
-<font color="#183661">&nbsp;設定在3.9-4.9(分鐘)</font><br>
+<font color="#006c9a">&nbsp;設定在3.9-4.9(分鐘)</font><br>
 &nbsp; ■ &nbsp;你設在這個區間的話，參加這個賭局的期望值是？<br>
 <font color="#006c9a">&nbsp;17.66，是本次賭局的最大獲利報酬。</font><br>
 <br>
