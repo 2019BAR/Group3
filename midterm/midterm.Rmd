@@ -53,6 +53,22 @@ items[items$product_id=="4244733e06e7ecb4970a6e2683c13e61",]
 ################################################
 ################以下黃柏勳部分##################
 ################################################
+```{r}
+olist.p <- olist_products_dataset.csv ##32,951 consumers
+table(olist.p$product_category_name) %>% sort() ##消費最多是 cama_mesa_banho 3029
+ 
+v <- mutate(olist.p, product_volume= product_length_cm*product_height_cm*product_width_cm)
+ggplot(v, aes(product_photos_qty, product_name_lenght))+ geom_point()
+ggplot(v, aes(product_volume))+ geom_bar()
+table(v$product_photos_qty) ##1 photo
+table(v$product_category_name, v$product_photos_qty)
+ggplot(v,aes(product_name_lenght))+ geom_bar()  ##左尾分布 集中在接近60
+ggplot(v,aes(product_description_lenght))+ geom_bar() ##右尾分布 集中在0~1000
+ggplot(v,aes(product_volume))+ geom_histogram(binwidth = 1500)
+by_name <- group_by(v,product_category_name) %>% summarise(avg = mean(product_volume)) %>% as.data.frame() ##貨物平均體積
+by_name <- by_name[-1,]
+m <- merge(by_name,product_category_name_translation.csv,all=F)
+```
 
 ################################################
 ################以下孫嘉力部分##################
