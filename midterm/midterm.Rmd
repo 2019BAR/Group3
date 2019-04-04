@@ -79,7 +79,7 @@ m <- merge(by_name,product_category_name_translation.csv,all=F)
 ################################################
 
 ```{r}
-#載入和合併資料
+#載入和合併資料#NEW
 B <- olist_order_reviews_dataset.csv
 C <- olist_order_items_dataset.csv
 D <- olist_sellers_dataset.csv
@@ -97,7 +97,7 @@ sort(table(sco))
 
 ```{r}
 t=as.Date(B$review_creation_date)
-#歷年來評分數量直方圖
+#歷年來評分直方圖
 hist(t,"month",las=2,freq=T,ylab="數量",main="歷年來評分數量")
 #各月分評分數量
 table(format(t,'%m')) %>% sort()
