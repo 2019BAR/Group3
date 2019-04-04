@@ -79,7 +79,7 @@ m <- merge(by_name,product_category_name_translation.csv,all=F)
 ################################################
 
 ```{r}
-#載入和合併資料#NEW
+#載入和合併資料
 B <- olist_order_reviews_dataset.csv
 C <- olist_order_items_dataset.csv
 D <- olist_sellers_dataset.csv
@@ -150,7 +150,7 @@ plot(A$price,A$review_score,main="", ylab="評分", xlab="價錢")
 #從圖來看，越貴評分越高(?)
 ggplot(A, aes(price, review_score))+
 geom_smooth(se = FALSE) 
-#但相關係數<0，而且相關性低
+#但相關係數為負，而且相關性低
 model=lm(A$price~A$review_score) 
 summary(model)
 cor(A$price,A$review_score)
