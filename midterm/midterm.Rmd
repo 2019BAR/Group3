@@ -1,0 +1,169 @@
+---
+title: "R 期中競賽"
+output: html_notebook
+---
+###共同區域###
+
+#Loading multiple .csv files as separate data frames
+```{r}
+getwd()
+folder <- "data/"
+file_list <- list.files(path = folder, pattern = "*.csv")
+```
+
+#read in each .csv file 
+```{r}
+for (i in 1:length(file_list)){
+  assign(file_list[i],
+         read.csv(paste(folder,file_list[i],sep=''),stringsAsFactors = F)
+  )}
+```
+
+################################################
+################以下王欣部分####################
+################################################
+
+#1 items & payments
+```{r}
+payments <- olist_order_payments_dataset.csv #103886X5
+items <- olist_order_items_dataset.csv #112650X7
+products <- olist_products_dataset.csv #32951X9
+```
+
+```{r}
+str(payments)
+str(items)
+str(products)
+```
+
+```{r}
+items[items$product_id=="4244733e06e7ecb4970a6e2683c13e61",]
+
+```
+
+
+################################################
+################以下王誠歆部分##################
+################################################
+
+################################################
+################以下張延瑋部分##################
+################################################
+
+################################################
+################以下黃柏勳部分##################
+################################################
+```{r}
+olist.p <- olist_products_dataset.csv ##32,951 consumers
+table(olist.p$product_category_name) %>% sort() ##消費最多是 cama_mesa_banho 3029
+ 
+v <- mutate(olist.p, product_volume= product_length_cm*product_height_cm*product_width_cm)
+ggplot(v, aes(product_photos_qty, product_name_lenght))+ geom_point()
+ggplot(v, aes(product_volume))+ geom_bar()
+table(v$product_photos_qty) ##1 photo
+table(v$product_category_name, v$product_photos_qty)
+ggplot(v,aes(product_name_lenght))+ geom_bar()  ##左尾分布 集中在接近60
+ggplot(v,aes(product_description_lenght))+ geom_bar() ##右尾分布 集中在0~1000
+ggplot(v,aes(product_volume))+ geom_histogram(binwidth = 1500)
+by_name <- group_by(v,product_category_name) %>% summarise(avg = mean(product_volume)) %>% as.data.frame() ##貨物平均體積
+by_name <- by_name[-1,]
+m <- merge(by_name,product_category_name_translation.csv,all=F)
+```
+
+################################################
+################以下孫嘉力部分##################
+################################################
+
+################################################
+################以下李燦宇部分##################
+################################################
+
+```{r}
+#載入和合併資料#NEW
+B <- olist_order_reviews_dataset.csv
+C <- olist_order_items_dataset.csv
+D <- olist_sellers_dataset.csv
+A<-merge(x = B, y = C, by = "order_id")
+E<-merge(x = A, y = D, by = "seller_id")
+str(E)
+```
+
+```{r}
+sco<-B$review_score
+#1~5分各自的數量
+barplot(table(sco),main="Scores",xlab="分數", ylab="數量")
+sort(table(sco))
+```
+
+```{r}
+t=as.Date(B$review_creation_date)
+#歷年來評分直方圖
+hist(t,"month",las=2,freq=T,ylab="數量",main="歷年來評分數量")
+#各月分評分數量
+table(format(t,'%m')) %>% sort()
+table(format(t,'%m'))%>% hist(xlab="月份",ylab="數量",main="各月評分數量")
+
+#各個月的5分數量比例
+s5<-filter(B, review_score ==5 )
+ts5=as.Date(s5$review_creation_date)
+table(format(ts5,'%m')) %>% sort()
+a5<-table(format(ts5,'%m'))/table(format(t,'%m'))
+
+
+#各個月的4分比例
+s4<-filter(B, review_score ==4 )
+ts4=as.Date(s4$review_creation_date)
+a4<-table(format(ts4,'%m'))/table(format(t,'%m'))
+
+#各個月的3分比例
+s3<-filter(B, review_score ==3 )
+ts3=as.Date(s3$review_creation_date)
+a3<-table(format(ts3,'%m'))/table(format(t,'%m'))
+
+#各個月的2分比例
+s2<-filter(B, review_score ==2 )
+ts2=as.Date(s2$review_creation_date)
+a2<-table(format(ts2,'%m'))/table(format(t,'%m'))
+
+#各個月的1分比例
+s1<-filter(B, review_score ==1 )
+ts1=as.Date(s1$review_creation_date)
+a1<-table(format(ts1,'%m'))/table(format(t,'%m'))
+
+#表格(每個月分的評分1~5的比例)
+df = data.frame(a1, a2, a3,a4,a5) 
+df 
+
+
+
+#重複
+#scopermonth = replicate(1:5, function(n) {a<- filter(B, review_score ==n)
+#(b=as.Date(a$review_creation_date)
+#table(format(b,'%m'))
+ # })
+#未完成:沒有留下評論的數量&日期&評分
+```
+
+```{r}
+#商品價格和評分高低的關係
+plot(A$price,A$review_score,main="", ylab="評分", xlab="價錢")
+#從圖來看，越貴評分越高(?)
+ggplot(A, aes(price, review_score))+
+geom_smooth(se = FALSE) 
+#但相關係數<0，而且相關性低
+model=lm(A$price~A$review_score) 
+summary(model)
+cor(A$price,A$review_score)
+```
+
+```{r}
+#不同地區賣家的商品評分(聖保羅和里約熱內盧，前者商品評價較高)
+NSP<-filter(E, seller_state =="SP" )
+NRJ<-filter(E, seller_state =="RJ" )
+
+summary(NSP$review_score)
+summary(NRJ$review_score)
+```
+################################################
+################以下劉漢慈部分##################
+################################################
