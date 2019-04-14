@@ -75,7 +75,7 @@ m <- merge(by_name,product_category_name_translation.csv,all=F)
 ################################################
 
 ################################################
-################以下李燦宇部分##################
+################以下李璨宇部分##################
 ################################################
 
 ```{r}
@@ -89,8 +89,7 @@ str(E)
 ```
 
 ```{r}
-sco<-B$review_score
-#1~5分各自的數量
+sco<-B$review_score #1~5分各自的數量
 barplot(table(sco),main="Scores",xlab="分數", ylab="數量")
 sort(table(sco))
 ```
@@ -108,7 +107,6 @@ s5<-filter(B, review_score ==5 )
 ts5=as.Date(s5$review_creation_date)
 table(format(ts5,'%m')) %>% sort()
 a5<-table(format(ts5,'%m'))/table(format(t,'%m'))
-
 ```
 
 ```{r}
@@ -123,14 +121,7 @@ summary(model)
 cor(A$price,A$review_score)
 ```
 
-```{r}
-#不同地區賣家的商品評分(聖保羅和里約熱內盧，前者商品評價較高)
-NSP<-filter(E, seller_state =="SP" )
-NRJ<-filter(E, seller_state =="RJ" )
 
-summary(NSP$review_score)
-summary(NRJ$review_score)
-```
 ################################################
 ################以下劉漢慈部分##################
 ################################################
