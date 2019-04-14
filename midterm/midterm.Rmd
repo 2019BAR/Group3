@@ -109,39 +109,6 @@ ts5=as.Date(s5$review_creation_date)
 table(format(ts5,'%m')) %>% sort()
 a5<-table(format(ts5,'%m'))/table(format(t,'%m'))
 
-
-#各個月的4分比例
-s4<-filter(B, review_score ==4 )
-ts4=as.Date(s4$review_creation_date)
-a4<-table(format(ts4,'%m'))/table(format(t,'%m'))
-
-#各個月的3分比例
-s3<-filter(B, review_score ==3 )
-ts3=as.Date(s3$review_creation_date)
-a3<-table(format(ts3,'%m'))/table(format(t,'%m'))
-
-#各個月的2分比例
-s2<-filter(B, review_score ==2 )
-ts2=as.Date(s2$review_creation_date)
-a2<-table(format(ts2,'%m'))/table(format(t,'%m'))
-
-#各個月的1分比例
-s1<-filter(B, review_score ==1 )
-ts1=as.Date(s1$review_creation_date)
-a1<-table(format(ts1,'%m'))/table(format(t,'%m'))
-
-#表格(每個月分的評分1~5的比例)
-df = data.frame(a1, a2, a3,a4,a5) 
-df 
-
-
-
-#重複
-#scopermonth = replicate(1:5, function(n) {a<- filter(B, review_score ==n)
-#(b=as.Date(a$review_creation_date)
-#table(format(b,'%m'))
- # })
-#未完成:沒有留下評論的數量&日期&評分
 ```
 
 ```{r}
