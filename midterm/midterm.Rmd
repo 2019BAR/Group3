@@ -1,9 +1,28 @@
 ---
-title: "R <e6><9c>葉蝡嗉魚"
+title: "R <e6><9c> Midterm"
 output:
   html_document:
     df_print: paged
 ---
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# 這些程式碼設定網頁的格式，並安裝、載入一些基本的套件，請大家不要去改動<br>
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=5, width=80)
+if(!require(pacman)) install.packages("pacman")
+```
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(ggthemes)
+library(data.table)
+```
+
 ###共同區域###
 
 #Loading multiple .csv files as separate data frames
@@ -13,13 +32,29 @@ folder <- "data/"
 file_list <- list.files(path = folder, pattern = "*.csv")
 ```
 
-#read in each .csv file 
+#Read in each .csv file 
 ```{r}
 for (i in 1:length(file_list)){
   assign(file_list[i],
          read.csv(paste(folder,file_list[i],sep=''),stringsAsFactors = F)
   )}
 ```
+
+#Rename data
+```{r}
+geo <- olist_geolocation_dataset.csv
+orders <- olist_orders_dataset.csv
+cust <- olist_customers_dataset.csv
+sellers <- olist_sellers_dataset.csv
+products <- olist_products_dataset.csv
+orderitems <- olist_order_items_dataset.csv
+payments <- olist_order_payments_dataset.csv
+nametrans <- product_category_name_translation.csv
+reviews <- olist_order_reviews_dataset.csv
+closed <- olist_closed_deals_dataset.csv
+marketing <- olist_marketing_qualified_leads_dataset.csv
+```
+
 
 ################################################
 ################以下王欣部分####################
@@ -56,10 +91,12 @@ items[items$product_id=="4244733e06e7ecb4970a6e2683c13e61",]
 ################以下黃柏勳部分##################
 ################################################
 ```{r}
-olist.p <- olist_products_dataset.csv ##32,951 consumers
-table(olist.p$product_category_name) %>% sort() ##消費最多是 cama_mesa_banho 3029
+#尋找出銷售最高的產品
+bs_olist.p <- olist_products_dataset.csv ##32,951 consumers 
+table(bs_olist.p$product_category_name) %>% sort(decreasing = TRUE) ##消費最多是 cama_mesa_banho 3029
  
-v <- mutate(olist.p, product_volume= product_length_cm*product_height_cm*product_width_cm)
+#
+v <- mutate(bs_olist.p, product_volume= product_length_cm*product_height_cm*product_width_cm)
 ggplot(v, aes(product_photos_qty, product_name_lenght))+ geom_point()
 ggplot(v, aes(product_volume))+ geom_bar()
 table(v$product_photos_qty) ##1 photo
@@ -79,7 +116,7 @@ m <- m[,-3]  ##貨物種類-平均體積
 ```{r}
 ##整理消費者購買月份
 
-library(data.table)
+
 ts = as.POSIXct(as.character(olist_orders_dataset.csv$order_purchase_timestamp) , format="%Y-%m-%d %T")
 
 ts.bym <- cut(ts, breaks = "month")
