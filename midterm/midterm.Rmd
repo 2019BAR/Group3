@@ -1,18 +1,194 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "R <e6><9c>葉蝡嗉魚"
+output:
+  html_document:
+    df_print: paged
 ---
+###共同區域###
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
+#Loading multiple .csv files as separate data frames
 ```{r}
-plot(cars)
+getwd()
+folder <- "data/"
+file_list <- list.files(path = folder, pattern = "*.csv")
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+#read in each .csv file 
+```{r}
+for (i in 1:length(file_list)){
+  assign(file_list[i],
+         read.csv(paste(folder,file_list[i],sep=''),stringsAsFactors = F)
+  )}
+```
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+################################################
+################以下王欣部分####################
+################################################
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+#1 items & payments
+```{r}
+payments <- olist_order_payments_dataset.csv #103886X5
+items <- olist_order_items_dataset.csv #112650X7
+products <- olist_products_dataset.csv #32951X9
+```
+
+```{r}
+str(payments)
+str(items)
+str(products)
+```
+
+```{r}
+items[items$product_id=="4244733e06e7ecb4970a6e2683c13e61",]
+
+```
+
+
+################################################
+################以下王誠歆部分##################
+################################################
+
+################################################
+################以下張延瑋部分##################
+################################################
+
+################################################
+################以下黃柏勳部分##################
+################################################
+```{r}
+olist.p <- olist_products_dataset.csv ##32,951 consumers
+table(olist.p$product_category_name) %>% sort() ##消費最多是 cama_mesa_banho 3029
+ 
+v <- mutate(olist.p, product_volume= product_length_cm*product_height_cm*product_width_cm)
+ggplot(v, aes(product_photos_qty, product_name_lenght))+ geom_point()
+ggplot(v, aes(product_volume))+ geom_bar()
+table(v$product_photos_qty) ##1 photo
+table(v$product_category_name, v$product_photos_qty)
+ggplot(v,aes(product_name_lenght))+ geom_bar()  ##左尾分布 集中在接近60
+ggplot(v,aes(product_description_lenght))+ geom_bar() ##右尾分布 集中在0~1000
+ggplot(v,aes(product_volume))+ geom_histogram(binwidth = 1500)
+by_name <- group_by(v,product_category_name) %>% summarise(avg = mean(product_volume)) %>% as.data.frame() ##貨物平均體積
+by_name <- by_name[-1,]
+product_category_name_translation.csv$product_category_name<- product_category_name_translation.csv$嚜穆roduct_category_name
+
+m <- merge(by_name,product_category_name_translation.csv,all = F)
+m <- m[,-3]  ##貨物種類-平均體積
+
+```
+
+```{r}
+##整理消費者購買月份
+
+library(data.table)
+ts = as.POSIXct(as.character(olist_orders_dataset.csv$order_purchase_timestamp) , format="%Y-%m-%d %T")
+
+ts.bym <- cut(ts, breaks = "month")
+dfts <- data.frame(ts,ts.bym)
+table(dfts$ts.bym)
+ggplot(dfts, aes(ts.bym),las=1)+ geom_bar() ##最多銷售月份為2018-1-1
+
+
+##每日尖峰時段
+ts.byH <- format(ts,format="%H") %>% data.frame()
+ggplot(ts.byH ,aes(.))+ geom_bar()
+table(ts.byH)
+```
+
+```{r}
+##商品種類-月份
+
+a <- merge(olist_orders_dataset.csv, olist_order_items_dataset.csv, by.x = "order_id")
+b <- merge(a, olist_products_dataset.csv, by.x = "product_id")
+c <- merge(b, product_category_name_translation.csv, by.x= "product_category_name")
+
+D <- select(c,product_category_name_english, order_purchase_timestamp)
+
+DD = as.POSIXct(as.character(D$order_purchase_timestamp) , format="%Y-%m-%d %T")
+DD.bym <- format(DD,format="%m")
+D$bym <- DD.bym
+E <- filter(D, product_category_name_english=="bed_bath_table"|product_category_name_english=="health_beauty"|product_category_name_english=="sports_leisure"|product_category_name_english=="furniture_decor"|product_category_name_english=="computers_accessories"|product_category_name_english=="housewares" )
+
+summary(D$product_category_name_english) %>% sort()
+
+##table(D$product_category_name_english, D$bym)
+ggplot(E ,aes(product_category_name_english, fill=bym))+ geom_bar() ##抓出銷售量最高的六種商品做每個月分的比例圖
+
+ggplot(D, aes(product_category_name_english, fill=bym, width=1))+ geom_bar()+coord_flip()  ##每種商品每個月分的銷售狀況
+
+##按照小時區分
+DD.byh <- format(DD,format="%H")
+D$byh <- DD.byh
+##table(D$product_category_name_english, D$byh)
+ggplot(D, aes(product_category_name_english, fill=byh, width=1))+ geom_bar()+coord_flip()##按照時間點的銷售量
+```
+
+
+```{r}
+###抓出一次性購買消費者特性
+Q <- group_by(olist_customers_dataset.csv, customer_unique_id) %>% summarise(nid=n())
+Q <- filter(Q, nid==1) 
+QQ <- olist_customers_dataset.csv
+QQQ <- merge(Q,QQ, by="customer_unique_id")
+W <- merge(QQQ, olist_orders_dataset.csv, by="customer_id", all=F)
+WW <- merge(W,olist_order_items_dataset.csv, by="order_id", all=F)
+WWW <- merge(WW, olist_products_dataset.csv, by="product_id", all=F)
+WWWW <- merge(WWW,product_category_name_translation.csv, by="product_category_name", all = F)
+table(WWWW$product_category_name_english) %>% sort() ##消費量最多為bed_beath
+onece <- group_by(WWWW, product_category_name_english) %>% summarise(mean=mean(price), sum=sum(price))##平均消費額最多為computers與總消費最多為health_beauty
+```
+
+################################################
+################以下孫嘉力部分##################
+################################################
+
+################################################
+################以下李璨宇部分##################
+################################################
+
+```{r}
+#載入和合併資料
+B <- olist_order_reviews_dataset.csv
+C <- olist_order_items_dataset.csv
+D <- olist_sellers_dataset.csv
+A<-merge(x = B, y = C, by = "order_id")
+E<-merge(x = A, y = D, by = "seller_id")
+str(E)
+```
+
+```{r}
+sco<-B$review_score #1~5分各自的數量
+barplot(table(sco),main="Scores",xlab="分數", ylab="數量")
+sort(table(sco))
+```
+
+```{r}
+t=as.Date(B$review_creation_date)
+#歷年來評分直方圖
+hist(t,"month",las=2,freq=T,ylab="數量",main="歷年來評分數量")
+#各月分評分數量
+table(format(t,'%m')) %>% sort()
+table(format(t,'%m'))%>% hist(xlab="月份",ylab="數量",main="各月評分數量")
+
+#各個月的5分數量比例
+s5<-filter(B, review_score ==5 )
+ts5=as.Date(s5$review_creation_date)
+table(format(ts5,'%m')) %>% sort()
+a5<-table(format(ts5,'%m'))/table(format(t,'%m'))
+```
+
+```{r}
+#商品價格和評分高低的關係
+plot(A$price,A$review_score,main="", ylab="評分", xlab="價錢")
+#從圖來看，越貴評分越高(?)
+ggplot(A, aes(price, review_score))+
+geom_smooth(se = FALSE) 
+#但相關係數為負，而且相關性低
+model=lm(A$price~A$review_score) 
+summary(model)
+cor(A$price,A$review_score)
+```
+
+
+################################################
+################以下劉漢慈部分##################
+################################################
