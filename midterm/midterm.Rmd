@@ -122,6 +122,21 @@ D$byh <- DD.byh
 ggplot(D, aes(product_category_name_english, fill=byh, width=1))+ geom_bar()+coord_flip()##按照時間點的銷售量
 ```
 
+
+```{r}
+###抓出一次性購買消費者特性
+Q <- group_by(olist_customers_dataset.csv, customer_unique_id) %>% summarise(nid=n())
+Q <- filter(Q, nid==1) 
+QQ <- olist_customers_dataset.csv
+QQQ <- merge(Q,QQ, by="customer_unique_id")
+W <- merge(QQQ, olist_orders_dataset.csv, by="customer_id", all=F)
+WW <- merge(W,olist_order_items_dataset.csv, by="order_id", all=F)
+WWW <- merge(WW, olist_products_dataset.csv, by="product_id", all=F)
+WWWW <- merge(WWW,product_category_name_translation.csv, by="product_category_name", all = F)
+table(WWWW$product_category_name_english) %>% sort() ##消費量最多為bed_beath
+onece <- group_by(WWWW, product_category_name_english) %>% summarise(mean=mean(price), sum=sum(price))##平均消費額最多為computers與總消費最多為health_beauty
+```
+
 ################################################
 ################以下孫嘉力部分##################
 ################################################
