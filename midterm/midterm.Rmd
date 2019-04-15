@@ -1,6 +1,8 @@
 ---
-title: "R 期中競賽"
-output: html_notebook
+title: "R <e6><9c>葉蝡嗉魚"
+output:
+  html_document:
+    df_print: paged
 ---
 ###共同區域###
 
@@ -67,7 +69,57 @@ ggplot(v,aes(product_description_lenght))+ geom_bar() ##右尾分布 集中在0~
 ggplot(v,aes(product_volume))+ geom_histogram(binwidth = 1500)
 by_name <- group_by(v,product_category_name) %>% summarise(avg = mean(product_volume)) %>% as.data.frame() ##貨物平均體積
 by_name <- by_name[-1,]
-m <- merge(by_name,product_category_name_translation.csv,all=F)
+product_category_name_translation.csv$product_category_name<- product_category_name_translation.csv$嚜穆roduct_category_name
+
+m <- merge(by_name,product_category_name_translation.csv,all = F)
+m <- m[,-3]  ##貨物種類-平均體積
+
+```
+
+```{r}
+##整理消費者購買月份
+
+library(data.table)
+ts = as.POSIXct(as.character(olist_orders_dataset.csv$order_purchase_timestamp) , format="%Y-%m-%d %T")
+
+ts.bym <- cut(ts, breaks = "month")
+dfts <- data.frame(ts,ts.bym)
+table(dfts$ts.bym)
+ggplot(dfts, aes(ts.bym),las=1)+ geom_bar() ##最多銷售月份為2018-1-1
+
+
+##每日尖峰時段
+ts.byH <- format(ts,format="%H") %>% data.frame()
+ggplot(ts.byH ,aes(.))+ geom_bar()
+table(ts.byH)ㄩ
+```
+
+```{r}
+##商品種類-月份
+
+a <- merge(olist_orders_dataset.csv, olist_order_items_dataset.csv, by.x = "order_id")
+b <- merge(a, olist_products_dataset.csv, by.x = "product_id")
+c <- merge(b, product_category_name_translation.csv, by.x= "product_category_name")
+
+D <- select(c,product_category_name_english, order_purchase_timestamp)
+
+DD = as.POSIXct(as.character(D$order_purchase_timestamp) , format="%Y-%m-%d %T")
+DD.bym <- format(DD,format="%m")
+D$bym <- DD.bym
+E <- filter(D, product_category_name_english=="bed_bath_table"|product_category_name_english=="health_beauty"|product_category_name_english=="sports_leisure"|product_category_name_english=="furniture_decor"|product_category_name_english=="computers_accessories"|product_category_name_english=="housewares" )
+
+summary(D$product_category_name_english) %>% sort()
+
+##table(D$product_category_name_english, D$bym)
+ggplot(E ,aes(product_category_name_english, fill=bym))+ geom_bar() ##抓出銷售量最高的六種商品做每個月分的比例圖
+
+ggplot(D, aes(product_category_name_english, fill=bym, width=1))+ geom_bar()+coord_flip()  ##每種商品每個月分的銷售狀況
+
+##按照小時區分
+DD.byh <- format(DD,format="%H")
+D$byh <- DD.byh
+##table(D$product_category_name_english, D$byh)
+ggplot(D, aes(product_category_name_english, fill=byh, width=1))+ geom_bar()+coord_flip()##按照時間點的銷售量
 ```
 
 ################################################
@@ -130,8 +182,9 @@ hist(C2$fdividep2,las=2,freq=T,xlab="運費佔比",ylab="數量",main="運費佔
 
 ```{r}
 #商品種類的評分
-Q <- group_by(merge2,product_category_name)%>%summarize(score=mean(review_score))
+Q <- group_by(m2,business_segment)%>%summarize(score=mean(review_score))
 arrange(Q,score)
+sort(table(m2$business_segment))
 ```
 
 ################################################
