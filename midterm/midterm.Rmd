@@ -125,7 +125,57 @@ ggplot(D, aes(product_category_name_english, fill=byh, width=1))+ geom_bar()+coo
 ################################################
 ################以下孫嘉力部分##################
 ################################################
+#數據的定義會用到下面李璨宇的部分
+B <- olist_order_reviews_dataset.csv
+C <- olist_order_items_dataset.csv
+D <- olist_sellers_dataset.csv
+A<-merge(x = B, y = C, by = "order_id")
+E<-merge(x = A, y = D, by = "seller_id")
+str(E)
 
+library(dplyr)
+library(leaflet)
+library(maps)
+
+score <- E %>%
+group_by(seller_city) %>% 
+  summarise(
+  score = mean(review_score)
+  ) 
+
+geolocation <- olist_geolocation_dataset.csv
+geolocation['geolocation_zip_code_prefix'] = NULL
+geolocation <- geolocation %>% 
+group_by(geolocation_city) %>% 
+summarise(
+  lat = mean(geolocation_lat),
+  lng = mean(geolocation_lng),
+  state = olist_geolocation_dataset.csv$state,
+  seller_city = geolocation_city
+  )
+geolocation['seller_city'] = geolocation["geolocation_city"]
+
+city_score <- merge(score,geolocation,by="seller_city")
+city_score <- merge(city_score,)
+
+  city_score_fig <- leaflet() %>% 
+  addTiles()  %>%
+  addMarkers(
+    lng     = city_score$lng,
+    lat     = city_score$lat,
+    label   = as.character(c(city_score$score,city_score$seller_city)),
+    labelOptions = labelOptions(noHide = T) ,
+    options = popupOptions(closeButton = FALSE)
+  )
+
+#下面畫一個每個state的評價情況
+city_score %>%
+group_by(state) %>%
+summarise(
+  score = mean(score)
+)
+
+state_score_fig <-
 ################################################
 ################以下李璨宇部分##################
 ################################################
