@@ -122,10 +122,75 @@ D$byh <- DD.byh
 ggplot(D, aes(product_category_name_english, fill=byh, width=1))+ geom_bar()+coord_flip()##按照時間點的銷售量
 ```
 
+
+```{r}
+###抓出一次性購買消費者特性
+Q <- group_by(olist_customers_dataset.csv, customer_unique_id) %>% summarise(nid=n())
+Q <- filter(Q, nid==1) 
+QQ <- olist_customers_dataset.csv
+QQQ <- merge(Q,QQ, by="customer_unique_id")
+W <- merge(QQQ, olist_orders_dataset.csv, by="customer_id", all=F)
+WW <- merge(W,olist_order_items_dataset.csv, by="order_id", all=F)
+WWW <- merge(WW, olist_products_dataset.csv, by="product_id", all=F)
+WWWW <- merge(WWW,product_category_name_translation.csv, by="product_category_name", all = F)
+table(WWWW$product_category_name_english) %>% sort() ##消費量最多為bed_beath
+onece <- group_by(WWWW, product_category_name_english) %>% summarise(mean=mean(price), sum=sum(price))##平均消費額最多為computers與總消費最多為health_beauty
+```
+
 ################################################
 ################以下孫嘉力部分##################
 ################################################
+#數據的定義會用到下面李璨宇的部分
+B <- olist_order_reviews_dataset.csv
+C <- olist_order_items_dataset.csv
+D <- olist_sellers_dataset.csv
+A<-merge(x = B, y = C, by = "order_id")
+E<-merge(x = A, y = D, by = "seller_id")
+str(E)
 
+library(dplyr)
+library(leaflet)
+library(maps)
+
+score <- E %>%
+group_by(seller_city) %>% 
+  summarise(
+  score = mean(review_score)
+  ) 
+
+geolocation <- olist_geolocation_dataset.csv
+geolocation['geolocation_zip_code_prefix'] = NULL
+geolocation <- geolocation %>% 
+group_by(geolocation_city) %>% 
+summarise(
+  lat = mean(geolocation_lat),
+  lng = mean(geolocation_lng),
+  state = olist_geolocation_dataset.csv$state,
+  seller_city = geolocation_city
+  )
+geolocation['seller_city'] = geolocation["geolocation_city"]
+
+city_score <- merge(score,geolocation,by="seller_city")
+city_score <- merge(city_score,)
+
+  city_score_fig <- leaflet() %>% 
+  addTiles()  %>%
+  addMarkers(
+    lng     = city_score$lng,
+    lat     = city_score$lat,
+    label   = as.character(c(city_score$score,city_score$seller_city)),
+    labelOptions = labelOptions(noHide = T) ,
+    options = popupOptions(closeButton = FALSE)
+  )
+
+#下面畫一個每個state的評價情況
+city_score %>%
+group_by(state) %>%
+summarise(
+  score = mean(score)
+)
+
+state_score_fig <-
 ################################################
 ################以下李璨宇部分##################
 ################################################
