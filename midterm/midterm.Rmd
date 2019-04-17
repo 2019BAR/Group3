@@ -232,48 +232,33 @@ state_score_fig <-
 ################以下李璨宇部分##################
 ################################################
 ```{r}
-sco<-B$review_score #1~5分各自的數量
-barplot(table(sco),main="Scores",xlab="分數", ylab="數量")
-sort(table(sco))
-#歷年來評分直方圖
-t=as.Date(B$review_creation_date)
-hist(t,"month",las=2,freq=T,ylab="數量",main="歷年來評分數量")
-#各月分評分數量
-table(format(t,'%m')) %>% sort()
-table(format(t,'%m'))%>% hist(xlab="月份",ylab="數量",main="各月評分數量")
-#各個月的5分數量比例
-s5<-filter(B, review_score ==5 )
-ts5=as.Date(s5$review_creation_date)
-table(format(ts5,'%m')) %>% sort()
-a5<-table(format(ts5,'%m'))/table(format(t,'%m'))
+#合併資料
+m1<-merge(x = orderitems, y = reviews, by = "order_id")
+m2<-merge(x = m1, y = closed, by = "seller_id")
+m3<-merge(x = m1, y = sellers, by = "seller_id")
 ```
 
 ```{r}
-#商品價格和評分高低的關係
-plot(A$price,A$review_score,main="", ylab="評分", xlab="價錢")
-#從圖來看，越貴評分越高(?)
-ggplot(A, aes(price, review_score))+
-geom_smooth(se = FALSE) 
-#但相關係數為負，而且相關性低
-model=lm(A$price~A$review_score) 
-summary(model)
-cor(A$price,A$review_score)
+#不同商品種類的平均評價分數 : air conditioning和handcrafted的平均評價最好
+Q <- group_by(m2,business_segment)%>%summarize(score=mean(review_score))
+arrange(Q,score)
+sort(table(m2$business_segment))
 ```
 
 ```{r}
-#運費佔價格比例與評分的關聯
-G2=mutate(G,fdividep=freight_value/price)
-ggplot(G2, aes(fdividep, review_score))+  #圖形上看起來，運費佔比越高，消費者對商品評價越低
+#運費佔價格比例與評分的關聯，圖形上看起來，運費佔比越高，消費者對商品評價越低。但運費佔比與評價的相關係數很小
+m30=mutate(m3,fdividep=freight_value/price)
+ggplot(m30, aes(fdividep, review_score))+  
 geom_smooth(se = FALSE) 
-model=lm(G2$fdivide~G2$review_score) #但兩者相關係數很小
+model=lm(m30$fdivide~m30$review_score) 
 summary(model)
-cor(G2$fdivide,G2$review_score)
-model=lm(G2$freight_value~G2$review_score) #運費與評價的相關係數也很小
+cor(m30$fdivide,m30$review_score)
+model=lm(m30$freight_value~m30$review_score) #運費高低與評價的相關係數也很小
 summary(model)
-cor(G2$freight_value,G2$review_score)
+cor(m30$freight_value,m30$review_score)
 
-#不同程度的運費佔比，佔商品總數百分比
-C2=mutate(C,fdividep2=freight_value/price) #C2含有112650 obs.
+#不同程度的運費佔比，佔商品總數百分比。可見多達75.759%的商品，其運費佔比小於0.4
+C2=mutate(orderitems,fdividep2=freight_value/price) #C2含有112650 obs.
 summarise(filter(C2, fdividep2 < 0.1 ),n())/112650      
 summarise(filter(filter(C2, fdividep2 < 0.2), fdividep2 >= 0.1),n())/112650  
 summarise(filter(filter(C2, fdividep2 < 0.3), fdividep2 >= 0.2),n())/112650 
@@ -283,11 +268,27 @@ hist(C2$fdividep2,las=2,freq=T,xlab="運費佔比",ylab="數量",main="運費佔
 ```
 
 ```{r}
-#商品種類的評分
-Q <- group_by(m2,business_segment)%>%summarize(score=mean(review_score))
-arrange(Q,score)
-sort(table(m2$business_segment))
+#直方圖 : 歷年來每個月交易數量
+t=as.Date(reviews$review_creation_date)
+hist(t,"month",las=2,freq=T,xlab="時間",ylab="數量",main="歷年來每個月交易數量")
+#不同月分的商品獲得5分評價的比例 : 可見7、8月商品評價較高
+score5<-filter(reviews, review_score ==5 )
+ts5=as.Date(score5$review_creation_date)
+table(format(ts5,'%m')) %>% sort()
+ratio5<-table(format(ts5,'%m'))/table(format(t,'%m'))
+ratio5
 ```
+
+```{r}
+#商品價格和評分高低的關係。從圖型來看，大約超過3000元的商品，越貴評分越高越貴的商品評分越高。但商品價格和評分高低相關係數相當低，可推測兩者並無太大關連
+plot(m1$price,m1$review_score,main="", ylab="評分", xlab="價錢")
+ggplot(m1, aes(price, review_score))+
+geom_smooth(se = FALSE) 
+model=lm(m1$price~m1$review_score) 
+summary(model)
+cor(m1$price,m1$review_score)
+```
+
 
 ################################################
 ################以下劉漢慈部分##################
