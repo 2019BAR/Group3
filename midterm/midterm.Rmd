@@ -1,5 +1,5 @@
 ---
-title: "R <e6><9c>葉蝡嗉魚"
+title: "R 期中競賽"
 output:
   html_document:
     df_print: paged
@@ -20,6 +20,22 @@ for (i in 1:length(file_list)){
          read.csv(paste(folder,file_list[i],sep=''),stringsAsFactors = F)
   )}
 ```
+
+#rename data
+```{r}
+geo <- olist_geolocation_dataset.csv
+orders <- olist_orders_dataset.csv
+cust <- olist_customers_dataset.csv
+sellers <- olist_sellers_dataset.csv
+products <- olist_products_dataset.csv
+orderitems <- olist_order_items_dataset.csv
+payments <- olist_order_payments_dataset.csv
+nametrans <- product_category_name_translation.csv
+reviews <- olist_order_reviews_dataset.csv
+closed <- olist_closed_deals_dataset.csv
+marketing <- olist_marketing_qualified_leads_dataset.csv
+```
+
 
 ################################################
 ################以下王欣部分####################
@@ -43,11 +59,6 @@ items[items$product_id=="4244733e06e7ecb4970a6e2683c13e61",]
 
 ```
 
-
-################################################
-################以下王誠歆部分##################
-################################################
-
 ################################################
 ################以下張延瑋部分##################
 ################################################
@@ -55,6 +66,7 @@ items[items$product_id=="4244733e06e7ecb4970a6e2683c13e61",]
 ################################################
 ################以下黃柏勳部分##################
 ################################################
+
 ```{r}
 olist.p <- olist_products_dataset.csv ##32,951 consumers
 table(olist.p$product_category_name) %>% sort() ##消費最多是 cama_mesa_banho 3029
@@ -69,16 +81,13 @@ ggplot(v,aes(product_description_lenght))+ geom_bar() ##右尾分布 集中在0~
 ggplot(v,aes(product_volume))+ geom_histogram(binwidth = 1500)
 by_name <- group_by(v,product_category_name) %>% summarise(avg = mean(product_volume)) %>% as.data.frame() ##貨物平均體積
 by_name <- by_name[-1,]
-product_category_name_translation.csv$product_category_name<- product_category_name_translation.csv$嚜穆roduct_category_name
-
+product_category_name_translation.csv$product_category_name<-product_category_name_translation.csv$嚜穆roduct_category_name
 m <- merge(by_name,product_category_name_translation.csv,all = F)
 m <- m[,-3]  ##貨物種類-平均體積
-
 ```
 
 ```{r}
 ##整理消費者購買月份
-
 library(data.table)
 ts = as.POSIXct(as.character(olist_orders_dataset.csv$order_purchase_timestamp) , format="%Y-%m-%d %T")
 
@@ -93,6 +102,7 @@ ts.byH <- format(ts,format="%H") %>% data.frame()
 ggplot(ts.byH ,aes(.))+ geom_bar()
 table(ts.byH)
 ```
+
 
 ```{r}
 ##商品種類-月份
@@ -140,6 +150,55 @@ onece <- group_by(WWWW, product_category_name_english) %>% summarise(mean=mean(p
 ################################################
 ################以下孫嘉力部分##################
 ################################################
+```{r}
+#數據的定義會用到下面李璨宇的部分
+B <- olist_order_reviews_dataset.csv
+C <- olist_order_items_dataset.csv
+D <- olist_sellers_dataset.csv
+A<-merge(x = B, y = C, by = "order_id")
+E<-merge(x = A, y = D, by = "seller_id")
+str(E)
+
+library(dplyr)
+library(leaflet)
+library(maps)
+
+score <- E %>%
+group_by(seller_city) %>% 
+  summarise(
+  score = mean(review_score)
+  ) 
+
+geolocation <- olist_geolocation_dataset.csv
+geolocation['geolocation_zip_code_prefix'] = NULL
+geolocation <- geolocation %>% 
+group_by(geolocation_city) %>% 
+summarise(
+  lat = mean(geolocation_lat),
+  lng = mean(geolocation_lng),
+  state = olist_geolocation_dataset.csv$state,
+  seller_city = geolocation_city
+  )
+geolocation['seller_city'] = geolocation["geolocation_city"]
+
+city_score <- merge(score,geolocation,by="seller_city")
+city_score <- merge(city_score,)
+
+  city_score_fig <- leaflet() %>% 
+  addTiles()  %>%
+  addMarkers(
+    lng     = city_score$lng,
+    lat     = city_score$lat,
+    label   = as.character(c(city_score$score,city_score$seller_city)),
+    labelOptions = labelOptions(noHide = T) ,
+    options = popupOptions(closeButton = FALSE)
+  )
+
+#下面畫一個每個state的評價情況
+city_score %>% group_by(state) %>% summarise(
+  score = mean(score)
+)
+```
 
 ################################################
 ################以下李璨宇部分##################
@@ -187,8 +246,3 @@ model=lm(A$price~A$review_score)
 summary(model)
 cor(A$price,A$review_score)
 ```
-
-
-################################################
-################以下劉漢慈部分##################
-################################################
