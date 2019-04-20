@@ -178,56 +178,58 @@ onece <- group_by(WWWW, product_category_name_english) %>% summarise(mean=mean(p
 ################以下孫嘉力部分##################
 ################################################
 #數據的定義會用到下面李璨宇的部分
-B <- olist_order_reviews_dataset.csv
-C <- olist_order_items_dataset.csv
-D <- olist_sellers_dataset.csv
-A<-merge(x = B, y = C, by = "order_id")
-E<-merge(x = A, y = D, by = "seller_id")
-str(E)
+reviews <-olist_order_reviews_dataset.csv
+orderitms <- olist_order_items_dataset.csv
+sellers <-  olist_sellers_dataset.csv
+#A <- review of orderitems 
+A<-merge(x = reviews , y = orderitems, by = "order_id")
+#E <- review of sellers with order information
+E<-merge(x = A , y = sellers, by = "seller_id")
 
 library(dplyr)
 library(leaflet)
 library(maps)
-
+#score: the average score of each city
 score <- E %>%
 group_by(seller_city) %>% 
   summarise(
   score = mean(review_score)
   ) 
 
+#geolocation: private dataframe, with state,lon and lat of each city
 geolocation <- olist_geolocation_dataset.csv
 geolocation['geolocation_zip_code_prefix'] = NULL
-geolocation <- geolocation %>% 
+geolocation <- geo %>% 
 group_by(geolocation_city) %>% 
 summarise(
   lat = mean(geolocation_lat),
-  lng = mean(geolocation_lng),
-  state = olist_geolocation_dataset.csv$state,
-  seller_city = geolocation_city
+  lng = mean(geolocation_lng)
   )
-geolocation['seller_city'] = geolocation["geolocation_city"]
+geolocation['state'] = geo["geolocation_state"]
+geolocation['seller_city'] = geo['geolocation_city']
 
+#merge score of cities and geo of cities so that we can use leaflet
 city_score <- merge(score,geolocation,by="seller_city")
-city_score <- merge(city_score,)
-
-  city_score_fig <- leaflet() %>% 
+city_score_fig <- leaflet() %>% 
   addTiles()  %>%
-  addMarkers(
+  addCircleMarkers(
     lng     = city_score$lng,
     lat     = city_score$lat,
-    label   = as.character(c(city_score$score,city_score$seller_city)),
-    labelOptions = labelOptions(noHide = T) ,
+    label   = city_score$seller_city,
+    color   = city_score$score,
+    labelOptions = labelOptions(noHide = F) ,
     options = popupOptions(closeButton = FALSE)
   )
 
-#下面畫一個每個state的評價情況
+#draw review of each state and use addPolygon to fig
 city_score %>%
 group_by(state) %>%
 summarise(
   score = mean(score)
 )
-
-state_score_fig <-
+state_score_fig <- leaflet() %>%
+  addTiles() %>%
+  addpPolygons()
 ################################################
 ################以下李璨宇部分##################
 ################################################
