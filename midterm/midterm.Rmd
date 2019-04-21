@@ -220,6 +220,13 @@ city_score_fig <- leaflet() %>%
     labelOptions = labelOptions(noHide = F) ,
     options = popupOptions(closeButton = FALSE)
   )
+#import Brazill json data 
+states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
+map_Brazil <- leaflet(states) %>%
+  setView((lng = ,lat = ,zoom = 4) %>%  
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
 
 #draw review of each state and use addPolygon to fig
 city_score %>%
