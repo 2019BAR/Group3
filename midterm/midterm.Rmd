@@ -129,6 +129,8 @@ M_8 = M_8[M_8$custlat <= 5.27438888,]
 ggplot() +
   geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
   geom_point(data= M_8,aes(x=selllng,y=selllat,color=seller_state),size=0.2)
+
+sum(M_8$seller_state=="BA" )
 ```
 
 #畫出買家所在地
@@ -210,6 +212,10 @@ model <- lm(score ~ . ,data = score_lm[,c(2:9,12)])
 summary(model)
 ```
 
+```{r}
+table( unique(M_8[, c(16,39)])$seller_id ) %>% table 
+unique(M_8[,16])%>% length()
+```
 
 ################################################
 ################以下張延瑋部分##################
