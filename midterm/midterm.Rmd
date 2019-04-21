@@ -177,7 +177,7 @@ onece <- group_by(WWWW, product_category_name_english) %>% summarise(mean=mean(p
 ################################################
 ################以下孫嘉力部分##################
 ################################################
-#數據的定義會用到下面李璨宇的部分
+#數據定義同公共部分
 reviews <-olist_order_reviews_dataset.csv
 orderitms <- olist_order_items_dataset.csv
 sellers <-  olist_sellers_dataset.csv
@@ -198,15 +198,19 @@ group_by(seller_city) %>%
 
 #geolocation: private dataframe, with state,lon and lat of each city
 geolocation <- olist_geolocation_dataset.csv
+geolocation['seller_city'] = geo['geolocation_city']
+geolocation['state'] = geo["geolocation_state"]
 geolocation['geolocation_zip_code_prefix'] = NULL
 geolocation <- geo %>% 
 group_by(geolocation_city) %>% 
 summarise(
   lat = mean(geolocation_lat),
-  lng = mean(geolocation_lng)
+  lng = mean(geolocation_lng),
+  seller_city = geolocation_city[1],
+  state = geolocation_state[1]
   )
-geolocation['state'] = geo["geolocation_state"]
-geolocation['seller_city'] = geo['geolocation_city']
+
+
 
 #merge score of cities and geo of cities so that we can use leaflet
 city_score <- merge(score,geolocation,by="seller_city")
@@ -220,23 +224,59 @@ city_score_fig <- leaflet() %>%
     labelOptions = labelOptions(noHide = F) ,
     options = popupOptions(closeButton = FALSE)
   )
-#import Brazill json data 
-states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
-map_Brazil <- leaflet(states) %>%
-  setView((lng = ,lat = ,zoom = 4) %>%  
-  addProviderTiles("MapBox", options = providerTileOptions(
-    id = "mapbox.light",
-    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
 
 #draw review of each state and use addPolygon to fig
-city_score %>%
+state_score <- city_score %>%
 group_by(state) %>%
 summarise(
   score = mean(score)
 )
-state_score_fig <- leaflet() %>%
-  addTiles() %>%
-  addpPolygons()
+
+#import Brazill json data 
+states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
+
+#form a map of Brazil 
+map_Brazil <- leaflet(states) %>%
+  setView(lat=-22.074022, lng=-48.74026, zoom = 4) %>%  
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
+map_Brazil %>% addPolygons()
+
+#color setting
+bins <- c(0,1.0,2.0,3.0,4.0,5.0)
+pal <- colorBin("YlOrRd", domain = state_score$score, bins = bins)
+#add Info
+labels <- sprintf(
+  "<strong>%s</strong><br/>  score: %g ",
+  state_score$state, state_score$score
+) %>% lapply(htmltools::HTML)
+
+#Just draw it!
+map_Brazil <- map_Brazil %>% addPolygons(
+  fillColor = ~pal(state_score$score),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  dashArray = "3",
+  fillOpacity = 0.7,
+  highlight = highlightOptions(
+    weight = 5,
+    color = "#666",
+    dashArray = "",
+    fillOpacity = 0.7,
+    bringToFront = TRUE),
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"))
+##add legend 
+map_Brazil <- map_Brazil %>%
+addLegend(pal = pal, values = ~state_score$score, opacity = 0.7, title = "average score",
+  position = "topright")
+
+map_Brazil
 ################################################
 ################以下李璨宇部分##################
 ################################################
