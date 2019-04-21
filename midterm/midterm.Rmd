@@ -95,7 +95,7 @@ M_6 <- merge(M_5,selllocation,by.x="seller_city",by.y="geolocation_city")
 M_7 <- merge(M_6,custlocation,by.x="customer_city",by.y="geolocation_city")
 
 colnames(nametrans) <- c("product_category_name","product_category_name_english")
-M_8<-merge(M_7,nametrans,by="product_category_name")
+
 ```
 
 #4 計算買賣家之間的距離
@@ -112,6 +112,7 @@ for (i in 1:nrow(M_7)) {
   
 }
 M_7$distbtwn<-as.integer(dist_list)
+M_8<-merge(M_7,nametrans,by="product_category_name")
 ```
 
 #5 置入巴西地理資料
@@ -121,27 +122,93 @@ Brazil<-map_data("world") %>% filter(region=="Brazil")
 #排除界外外的資料
 M_8 = M_8[M_8$selllat <= 5.27438888,]
 M_8 = M_8[M_8$custlat <= 5.27438888,]
+```
 
 #畫出賣家所在地
+```{r}
 ggplot() +
   geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
   geom_point(data= M_8,aes(x=selllng,y=selllat,color=seller_state),size=0.2)
 ```
-```{r}
+
 #畫出買家所在地
+```{r}
 ggplot() +
   geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
   geom_point(data= M_8,aes(x=custlng,y=custlat,color=customer_state),size=0.2)
 ```
-```{r}
+
 #各產品類別銷售情況及所在地
+```{r}
 ggplot() +
   geom_bar(data= M_8,aes(product_category_name_english,fill=seller_state),width=1)+ coord_flip()
 ```
-```{r}
 
+#賣家所在地數量
+```{r}
+ggplot() +
+  geom_bar(data= M_8,aes(seller_state,fill=seller_state),width=1)
+```
+#6 找出前100大賣家
+```{r}
+seller_TOP100 <-
+  M_8 %>% group_by(seller_id,product_category_name_english) %>% summarise(
+  mount = sum(price),
+  num = n()) %>% arrange(desc(num)) %>% head(100)
+
+seller_TOP100_2 <- merge(seller_TOP100,closed[,c(1,2,6,8,9,12)],by="seller_id",all.x = T)
+
+marketingdata <- merge(closed[,c(1,2,6,8,9,12)],marketing[,c(1,4)],by = "mql_id")
+ 
+M_9 <-  merge(M_8,marketingdata,by = "seller_id")
 ```
 
+#分析
+```{r}
+A_1 <- M_9 %>% group_by(lead_behaviour_profile,business_segment) %>% summarise(
+  n_business = n(),
+  mount = sum(price),
+  every_mount = mount/n_business
+  )  %>% arrange(desc(lead_behaviour_profile))
+   
+table(A_1$lead_behaviour_profile) 
+```
+```{r}
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_9,aes(x=custlng,y=custlat,color=lead_behaviour_profile),size=0.2)
+
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_9[M_9$lead_behaviour_profile=="wolf",],aes(x=custlng,y=custlat,color=lead_behaviour_profile),size=0.2)
+```
+#7 找對評分的重要變數
+```{r}
+M_9 %>% colnames() #2:4,9:11,15,17,19:20,22,24,25,32,38
+score <- M_9[,c(5,10:12,16,17,19,20,22,24,25,32,38)] %>% group_by(order_id) %>% summarise(
+  ship13 = mean(order_delivered_customer_date-order_approved_at),
+  ship12 = mean(order_delivered_carrier_date-order_approved_at),
+  ship23 = mean(order_delivered_customer_date-order_delivered_carrier_date),
+  ship_ratio = mean(freight_value/price),
+  description = sum(product_description_lenght)/max(order_item_id),
+  photo_num = sum(product_photos_qty)/max(order_item_id),
+  pay_installment = sum(payment_installments)/max(order_item_id),
+  dist = sum(distbtwn)/max(order_item_id),
+  customer_state = head(customer_state,1),
+  seller_state = head(seller_state,1)
+)  
+
+reviews2 <- reviews %>% group_by(order_id) %>% summarise(
+  score = mean(review_score)
+)
+```
+
+```{r}
+score_lm<-merge(score,reviews2,by="order_id")
+colnames(score)
+model <- lm(score ~ . ,data = score_lm[,c(2:9,12)])
+summary(model)
+```
 
 
 ################################################
