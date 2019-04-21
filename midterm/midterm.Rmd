@@ -6,7 +6,7 @@ output:
 ---
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
-# 這些程式碼設定網頁的格式，並安裝、載入一些基本的套件，請大家不要去改動
+# 這些程式碼設定網頁的格式，並安裝、載入一些基本的套件，請大家不要去改動<br>
 rm(list=ls(all=T))
 knitr::opts_chunk$set(comment = NA)
 knitr::opts_knit$set(global.par = TRUE)
@@ -16,12 +16,11 @@ if(!require(pacman)) install.packages("pacman")
 ```
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
-packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate")
-
-existing = as.character(installed.packages()[,1])
-for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
-
-sapply(packages,library, character.only = T)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(ggthemes)
+library(data.table)
 ```
 
 ###共同區域###
@@ -60,7 +59,6 @@ marketing <- olist_marketing_qualified_leads_dataset.csv
 ################################################
 ################以下王欣部分####################
 ################################################
-
 ###前處理
 
 #1 地理資料整理
@@ -129,8 +127,6 @@ M_8 = M_8[M_8$custlat <= 5.27438888,]
 ggplot() +
   geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
   geom_point(data= M_8,aes(x=selllng,y=selllat,color=seller_state),size=0.2)
-
-sum(M_8$seller_state=="BA" )
 ```
 
 #畫出買家所在地
@@ -212,10 +208,10 @@ model <- lm(score ~ . ,data = score_lm[,c(2:9,12)])
 summary(model)
 ```
 
-```{r}
-table( unique(M_8[, c(16,39)])$seller_id ) %>% table 
-unique(M_8[,16])%>% length()
-```
+################################################
+################以下王誠歆部分##################
+################################################
+
 
 ################################################
 ################以下張延瑋部分##################
@@ -224,7 +220,6 @@ unique(M_8[,16])%>% length()
 ################################################
 ################以下黃柏勳部分##################
 ################################################
-
 ```{r}
 #尋找出銷售最高的產品
 bs_olist.p <- olist_products_dataset.csv ##32,951 consumers 
@@ -241,15 +236,16 @@ ggplot(v,aes(product_description_lenght))+ geom_bar() ##右尾分布 集中在0~
 ggplot(v,aes(product_volume))+ geom_histogram(binwidth = 1500)
 by_name <- group_by(v,product_category_name) %>% summarise(avg = mean(product_volume)) %>% as.data.frame() ##貨物平均體積
 by_name <- by_name[-1,]
-product_category_name_translation.csv$product_category_name<-product_category_name_translation.csv$嚜穆roduct_category_name
+product_category_name_translation.csv$product_category_name<- product_category_name_translation.csv$嚜穆roduct_category_name
+
 m <- merge(by_name,product_category_name_translation.csv,all = F)
 m <- m[,-3]  ##貨物種類-平均體積
+
 ```
 
 ```{r}
 ##整理消費者購買月份
 
-library(data.table)
 
 ts = as.POSIXct(as.character(olist_orders_dataset.csv$order_purchase_timestamp) , format="%Y-%m-%d %T")
 
@@ -262,9 +258,8 @@ ggplot(dfts, aes(ts.bym),las=1)+ geom_bar() ##最多銷售月份為2018-1-1
 ##每日尖峰時段
 ts.byH <- format(ts,format="%H") %>% data.frame()
 ggplot(ts.byH ,aes(.))+ geom_bar()
-table(ts.byH)
+table(ts.byH)ㄩ
 ```
-
 
 ```{r}
 ##商品種類-月份
@@ -313,7 +308,7 @@ onece <- group_by(WWWW, product_category_name_english) %>% summarise(mean=mean(p
 ################以下孫嘉力部分##################
 ################################################
 ```{r}
-#數據的定義會用到下面李璨宇的部分
+#數據定義同公共部分
 reviews <-olist_order_reviews_dataset.csv
 orderitms <- olist_order_items_dataset.csv
 sellers <-  olist_sellers_dataset.csv
@@ -321,7 +316,9 @@ sellers <-  olist_sellers_dataset.csv
 A<-merge(x = reviews , y = orderitems, by = "order_id")
 #E <- review of sellers with order information
 E<-merge(x = A , y = sellers, by = "seller_id")
+```
 
+```{r}
 library(dplyr)
 library(leaflet)
 library(maps)
@@ -331,19 +328,26 @@ group_by(seller_city) %>%
   summarise(
   score = mean(review_score)
   ) 
+```
 
+```{r}
 #geolocation: private dataframe, with state,lon and lat of each city
 geolocation <- olist_geolocation_dataset.csv
+geolocation['seller_city'] = geo['geolocation_city']
+geolocation['state'] = geo["geolocation_state"]
 geolocation['geolocation_zip_code_prefix'] = NULL
 geolocation <- geo %>% 
 group_by(geolocation_city) %>% 
 summarise(
   lat = mean(geolocation_lat),
-  lng = mean(geolocation_lng)
+  lng = mean(geolocation_lng),
+  seller_city = geolocation_city[1],
+  state = geolocation_state[1]
   )
-geolocation['state'] = geo["geolocation_state"]
-geolocation['seller_city'] = geo['geolocation_city']
+```
 
+
+```{r}
 #merge score of cities and geo of cities so that we can use leaflet
 city_score <- merge(score,geolocation,by="seller_city")
 city_score_fig <- leaflet() %>% 
@@ -356,24 +360,79 @@ city_score_fig <- leaflet() %>%
     labelOptions = labelOptions(noHide = F) ,
     options = popupOptions(closeButton = FALSE)
   )
-
-#下面畫一個每個state的評價情況
-city_score %>% group_by(state) %>% summarise(
-  score = mean(score)
-)
 ```
+
+
 
 #draw review of each state and use addPolygon to fig
 ```{r}
 city_score %>%
-group_by(state) %>%
-summarise(
+
+state_score <- city_score %>% group_by(state) %>%
+  summarise(
   score = mean(score)
-)
+  )
+
 state_score_fig <- leaflet() %>%
   addTiles() %>%
   addpPolygons()
 ```
+
+```{r}
+#import Brazil json data 
+states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
+
+#form a map of Brazil 
+map_Brazil <- leaflet(states) %>%
+  setView(lat=-22.074022, lng=-48.74026, zoom = 4) %>%  
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
+map_Brazil %>% addPolygons()
+```
+
+```{r}
+#color setting
+bins <- c(0,1.0,2.0,3.0,4.0,5.0)
+pal <- colorBin("YlOrRd", domain = state_score$score, bins = bins)
+#add Info
+labels <- sprintf(
+  "<strong>%s</strong><br/>  score: %g ",
+  state_score$state, state_score$score
+) %>% lapply(htmltools::HTML)
+```
+
+```{r}
+#Just draw it!
+map_Brazil <- map_Brazil %>% addPolygons(
+  fillColor = ~pal(state_score$score),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  dashArray = "3",
+  fillOpacity = 0.7,
+  highlight = highlightOptions(
+    weight = 5,
+    color = "#666",
+    dashArray = "",
+    fillOpacity = 0.7,
+    bringToFront = TRUE),
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"))
+##add legend 
+map_Brazil <- map_Brazil %>%
+addLegend(pal = pal, values = ~state_score$score, opacity = 0.7, title = "average score",
+  position = "topright")
+```
+
+
+```{r}
+map_Brazil
+```
+
 
 
 ################################################
@@ -434,7 +493,6 @@ ggplot(m1, aes(price, review_score))+
 geom_smooth(se = FALSE) 
 model=lm(m1$price~m1$review_score) 
 summary(model)
-cor(A$price,A$review_score)
 cor(m1$price,m1$review_score)
 ```
 
@@ -442,4 +500,3 @@ cor(m1$price,m1$review_score)
 ################################################
 ################以下劉漢慈部分##################
 ################################################
-
