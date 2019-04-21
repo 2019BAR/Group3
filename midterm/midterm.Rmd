@@ -16,11 +16,13 @@ if(!require(pacman)) install.packages("pacman")
 ```
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
-library(dplyr)
-library(ggplot2)
-library(tidyverse)
-library(ggthemes)
-library(data.table)
+###工具
+packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet")
+
+existing = as.character(installed.packages()[,1])
+for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
+
+sapply(packages,library, character.only = T)
 ```
 
 ###共同區域###
