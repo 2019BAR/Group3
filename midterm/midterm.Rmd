@@ -17,7 +17,7 @@ if(!require(pacman)) install.packages("pacman")
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
 ###工具
-packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet")
+packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio")
 
 existing = as.character(installed.packages()[,1])
 for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
@@ -260,7 +260,7 @@ ggplot(dfts, aes(ts.bym),las=1)+ geom_bar() ##最多銷售月份為2018-1-1
 ##每日尖峰時段
 ts.byH <- format(ts,format="%H") %>% data.frame()
 ggplot(ts.byH ,aes(.))+ geom_bar()
-table(ts.byH)ㄩ
+table(ts.byH)
 ```
 
 ```{r}
@@ -368,21 +368,16 @@ city_score_fig <- leaflet() %>%
 
 #draw review of each state and use addPolygon to fig
 ```{r}
-city_score %>%
-
 state_score <- city_score %>% group_by(state) %>%
   summarise(
   score = mean(score)
   )
 
-state_score_fig <- leaflet() %>%
-  addTiles() %>%
-  addpPolygons()
 ```
 
 ```{r}
 #import Brazil json data 
-states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
+states <- geojsonio::geojson_read("C:\\Users\\User\\Desktop\\Group3\\midterm\\Brazil.json", what = "sp")
 
 #form a map of Brazil 
 map_Brazil <- leaflet(states) %>%
