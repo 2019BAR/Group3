@@ -4,6 +4,26 @@ output:
   html_document:
     df_print: paged
 ---
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# 這些程式碼設定網頁的格式，並安裝、載入一些基本的套件，請大家不要去改動
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=5, width=80)
+if(!require(pacman)) install.packages("pacman")
+```
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate")
+
+existing = as.character(installed.packages()[,1])
+for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
+
+sapply(packages,library, character.only = T)
+```
+
 ###共同區域###
 
 #Loading multiple .csv files as separate data frames
@@ -13,7 +33,7 @@ folder <- "data/"
 file_list <- list.files(path = folder, pattern = "*.csv")
 ```
 
-#read in each .csv file 
+#Read in each .csv file 
 ```{r}
 for (i in 1:length(file_list)){
   assign(file_list[i],
@@ -21,7 +41,7 @@ for (i in 1:length(file_list)){
   )}
 ```
 
-#rename data
+#Rename data
 ```{r}
 geo <- olist_geolocation_dataset.csv
 orders <- olist_orders_dataset.csv
@@ -41,23 +61,88 @@ marketing <- olist_marketing_qualified_leads_dataset.csv
 ################以下王欣部分####################
 ################################################
 
-#1 items & payments
+###前處理
+
+#1 地理資料整理
 ```{r}
-payments <- olist_order_payments_dataset.csv #103886X5
-items <- olist_order_items_dataset.csv #112650X7
-products <- olist_products_dataset.csv #32951X9
+geo$geolocation_lat<-round(geo$geolocation_lat,3)
+geo$geolocation_lng<-round(geo$geolocation_lng,3)
+
+selllocation<-geo %>% group_by(geolocation_city) %>% summarise(selllat = max(geolocation_lat),selllng=max(geolocation_lng))
+custlocation<-geo %>% group_by(geolocation_city) %>% summarise(custlat = max(geolocation_lat),custlng=max(geolocation_lng))
 ```
 
+#2 時間資料處理
 ```{r}
-str(payments)
-str(items)
-str(products)
+orders$order_approved_at<-strptime(orders$order_approved_at,format="%Y-%m-%d %H:%M:%S")
+orders$order_purchase_timestamp<-strptime(orders$order_purchase_timestamp,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_carrier_date<-strptime(orders$order_delivered_carrier_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_customer_date<-strptime(orders$order_delivered_customer_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_estimated_delivery_date<-strptime(orders$order_estimated_delivery_date,format="%Y-%m-%d %H:%M:%S")
+
+table(orders$order_status)
+orderitems$shipping_limit_date<-strptime(orderitems$shipping_limit_date,format="%Y-%m-%d %H:%M:%S")
 ```
 
+#3 把各個資料合併
 ```{r}
-items[items$product_id=="4244733e06e7ecb4970a6e2683c13e61",]
+M_1 <- merge(orderitems,sellers,by.x="seller_id",by.y="seller_id")
+M_2 <- merge(orders,cust,by.x="customer_id",by.y="customer_id")
+M_3 <- merge(M_2,M_1,by="order_id")
+M_4 <- merge(M_3,products,by="product_id")
+M_5 <- merge(M_4,payments,by="order_id")
+M_6 <- merge(M_5,selllocation,by.x="seller_city",by.y="geolocation_city")
+M_7 <- merge(M_6,custlocation,by.x="customer_city",by.y="geolocation_city")
+
+colnames(nametrans) <- c("product_category_name","product_category_name_english")
+M_8<-merge(M_7,nametrans,by="product_category_name")
+```
+
+#4 計算買賣家之間的距離
+```{r}
+dist_list <- list()
+
+for (i in 1:nrow(M_7)) {
+  
+  dist_list[[i]] <- gdist(lon.1 = M_7$selllng[i], 
+                          lat.1 = M_7$selllat[i], 
+                          lon.2 = M_7$custlng[i], 
+                          lat.2 = M_7$custlat[i], 
+                          units="miles")
+  
+}
+M_7$distbtwn<-as.integer(dist_list)
+```
+
+#5 置入巴西地理資料
+```{r}
+Brazil<-map_data("world") %>% filter(region=="Brazil")
+
+#排除界外外的資料
+M_8 = M_8[M_8$selllat <= 5.27438888,]
+M_8 = M_8[M_8$custlat <= 5.27438888,]
+
+#畫出賣家所在地
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_8,aes(x=selllng,y=selllat,color=seller_state),size=0.2)
+```
+```{r}
+#畫出買家所在地
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_8,aes(x=custlng,y=custlat,color=customer_state),size=0.2)
+```
+```{r}
+#各產品類別銷售情況及所在地
+ggplot() +
+  geom_bar(data= M_8,aes(product_category_name_english,fill=seller_state),width=1)+ coord_flip()
+```
+```{r}
 
 ```
+
+
 
 ################################################
 ################以下張延瑋部分##################
@@ -68,10 +153,12 @@ items[items$product_id=="4244733e06e7ecb4970a6e2683c13e61",]
 ################################################
 
 ```{r}
-olist.p <- olist_products_dataset.csv ##32,951 consumers
-table(olist.p$product_category_name) %>% sort() ##消費最多是 cama_mesa_banho 3029
+#尋找出銷售最高的產品
+bs_olist.p <- olist_products_dataset.csv ##32,951 consumers 
+table(bs_olist.p$product_category_name) %>% sort(decreasing = TRUE) ##消費最多是 cama_mesa_banho 3029
  
-v <- mutate(olist.p, product_volume= product_length_cm*product_height_cm*product_width_cm)
+#
+v <- mutate(bs_olist.p, product_volume= product_length_cm*product_height_cm*product_width_cm)
 ggplot(v, aes(product_photos_qty, product_name_lenght))+ geom_point()
 ggplot(v, aes(product_volume))+ geom_bar()
 table(v$product_photos_qty) ##1 photo
@@ -88,7 +175,12 @@ m <- m[,-3]  ##貨物種類-平均體積
 
 ```{r}
 ##整理消費者購買月份
+<<<<<<< HEAD
 library(data.table)
+=======
+
+
+>>>>>>> ff995b00082abd3efdb83dcf9d173a14a3f77b63
 ts = as.POSIXct(as.character(olist_orders_dataset.csv$order_purchase_timestamp) , format="%Y-%m-%d %T")
 
 ts.bym <- cut(ts, breaks = "month")
@@ -100,7 +192,7 @@ ggplot(dfts, aes(ts.bym),las=1)+ geom_bar() ##最多銷售月份為2018-1-1
 ##每日尖峰時段
 ts.byH <- format(ts,format="%H") %>% data.frame()
 ggplot(ts.byH ,aes(.))+ geom_bar()
-table(ts.byH)
+table(ts.byH)ㄩ
 ```
 
 
@@ -203,46 +295,70 @@ city_score %>% group_by(state) %>% summarise(
 ################################################
 ################以下李璨宇部分##################
 ################################################
-
 ```{r}
-#載入和合併資料
-B <- olist_order_reviews_dataset.csv
-C <- olist_order_items_dataset.csv
-D <- olist_sellers_dataset.csv
-A<-merge(x = B, y = C, by = "order_id")
-E<-merge(x = A, y = D, by = "seller_id")
-str(E)
+#合併資料
+m1<-merge(x = orderitems, y = reviews, by = "order_id")
+m2<-merge(x = m1, y = closed, by = "seller_id")
+m3<-merge(x = m1, y = sellers, by = "seller_id")
 ```
 
 ```{r}
-sco<-B$review_score #1~5分各自的數量
-barplot(table(sco),main="Scores",xlab="分數", ylab="數量")
-sort(table(sco))
+#不同商品種類的平均評價分數 : air conditioning和handcrafted的平均評價最好
+Q <- group_by(m2,business_segment)%>%summarize(score=mean(review_score))
+arrange(Q,score)
+sort(table(m2$business_segment))
 ```
 
 ```{r}
-t=as.Date(B$review_creation_date)
-#歷年來評分直方圖
-hist(t,"month",las=2,freq=T,ylab="數量",main="歷年來評分數量")
-#各月分評分數量
-table(format(t,'%m')) %>% sort()
-table(format(t,'%m'))%>% hist(xlab="月份",ylab="數量",main="各月評分數量")
-
-#各個月的5分數量比例
-s5<-filter(B, review_score ==5 )
-ts5=as.Date(s5$review_creation_date)
-table(format(ts5,'%m')) %>% sort()
-a5<-table(format(ts5,'%m'))/table(format(t,'%m'))
-```
-
-```{r}
-#商品價格和評分高低的關係
-plot(A$price,A$review_score,main="", ylab="評分", xlab="價錢")
-#從圖來看，越貴評分越高(?)
-ggplot(A, aes(price, review_score))+
+#運費佔價格比例與評分的關聯，圖形上看起來，運費佔比越高，消費者對商品評價越低。但運費佔比與評價的相關係數很小
+m30=mutate(m3,fdividep=freight_value/price)
+ggplot(m30, aes(fdividep, review_score))+  
 geom_smooth(se = FALSE) 
-#但相關係數為負，而且相關性低
-model=lm(A$price~A$review_score) 
+model=lm(m30$fdivide~m30$review_score) 
 summary(model)
+cor(m30$fdivide,m30$review_score)
+model=lm(m30$freight_value~m30$review_score) #運費高低與評價的相關係數也很小
+summary(model)
+cor(m30$freight_value,m30$review_score)
+
+#不同程度的運費佔比，佔商品總數百分比。可見多達75.759%的商品，其運費佔比小於0.4
+C2=mutate(orderitems,fdividep2=freight_value/price) #C2含有112650 obs.
+summarise(filter(C2, fdividep2 < 0.1 ),n())/112650      
+summarise(filter(filter(C2, fdividep2 < 0.2), fdividep2 >= 0.1),n())/112650  
+summarise(filter(filter(C2, fdividep2 < 0.3), fdividep2 >= 0.2),n())/112650 
+summarise(filter(filter(C2, fdividep2 < 0.4), fdividep2 >= 0.3),n())/112650  
+summarise(filter(C2, fdividep2 >= 0.4),n())/112650      
+hist(C2$fdividep2,las=2,freq=T,xlab="運費佔比",ylab="數量",main="運費佔比的數量")
+```
+
+```{r}
+#直方圖 : 歷年來每個月交易數量
+t=as.Date(reviews$review_creation_date)
+hist(t,"month",las=2,freq=T,xlab="時間",ylab="數量",main="歷年來每個月交易數量")
+#不同月分的商品獲得5分評價的比例 : 可見7、8月商品評價較高
+score5<-filter(reviews, review_score ==5 )
+ts5=as.Date(score5$review_creation_date)
+table(format(ts5,'%m')) %>% sort()
+ratio5<-table(format(ts5,'%m'))/table(format(t,'%m'))
+ratio5
+```
+
+```{r}
+#商品價格和評分高低的關係。從圖型來看，大約超過3000元的商品，越貴評分越高越貴的商品評分越高。但商品價格和評分高低相關係數相當低，可推測兩者並無太大關連
+plot(m1$price,m1$review_score,main="", ylab="評分", xlab="價錢")
+ggplot(m1, aes(price, review_score))+
+geom_smooth(se = FALSE) 
+model=lm(m1$price~m1$review_score) 
+summary(model)
+<<<<<<< HEAD
 cor(A$price,A$review_score)
 ```
+=======
+cor(m1$price,m1$review_score)
+```
+
+
+################################################
+################以下劉漢慈部分##################
+################################################
+>>>>>>> ff995b00082abd3efdb83dcf9d173a14a3f77b63
