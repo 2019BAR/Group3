@@ -358,6 +358,7 @@ city_score %>% group_by(state) %>% summarise(
 ```
 
 #draw review of each state and use addPolygon to fig
+```{r}
 city_score %>%
 group_by(state) %>%
 summarise(
@@ -366,6 +367,8 @@ summarise(
 state_score_fig <- leaflet() %>%
   addTiles() %>%
   addpPolygons()
+```
+
 
 ################################################
 ################以下李璨宇部分##################
