@@ -233,6 +233,7 @@ summarise(
 )
 
 #import Brazill json data 
+install.packages(geojsonio)
 states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
 
 #form a map of Brazil 
