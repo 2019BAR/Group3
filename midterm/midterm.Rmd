@@ -74,14 +74,14 @@ custlocation<-geo %>% group_by(geolocation_city) %>% summarise(custlat = max(geo
 
 #2 時間資料處理
 ```{r}
-orders$order_approved_at<-as.POSIXlt(orders$order_approved_at,format="%Y-%m-%d %H:%M:%S")
-orders$order_purchase_timestamp<-as.POSIXlt(orders$order_purchase_timestamp,format="%Y-%m-%d %H:%M:%S")
-orders$order_delivered_carrier_date<-as.POSIXlt(orders$order_delivered_carrier_date,format="%Y-%m-%d %H:%M:%S")
-orders$order_delivered_customer_date<-as.POSIXlt(orders$order_delivered_customer_date,format="%Y-%m-%d %H:%M:%S")
-orders$order_estimated_delivery_date<-as.POSIXlt(orders$order_estimated_delivery_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_approved_at<-strptime(orders$order_approved_at,format="%Y-%m-%d %H:%M:%S")
+orders$order_purchase_timestamp<-strptime(orders$order_purchase_timestamp,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_carrier_date<-strptime(orders$order_delivered_carrier_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_customer_date<-strptime(orders$order_delivered_customer_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_estimated_delivery_date<-strptime(orders$order_estimated_delivery_date,format="%Y-%m-%d %H:%M:%S")
 
 table(orders$order_status)
-orderitems$shipping_limit_date<-as.POSIXlt(orderitems$shipping_limit_date,format="%Y-%m-%d %H:%M:%S")
+orderitems$shipping_limit_date<-strptime(orderitems$shipping_limit_date,format="%Y-%m-%d %H:%M:%S")
 ```
 
 #3 把各個資料合併
@@ -155,23 +155,15 @@ seller_TOP100 <-
   M_8 %>% group_by(seller_id,product_category_name_english) %>% summarise(
   mount = sum(price),
   num = n()) %>% arrange(desc(num)) %>% head(100)
-```
 
-# 加入新的兩筆資料
-```{r}
 seller_TOP100_2 <- merge(seller_TOP100,closed[,c(1,2,6,8,9,12)],by="seller_id",all.x = T)
 
 marketingdata <- merge(closed[,c(1,2,6,8,9,12)],marketing[,c(1,4)],by = "mql_id")
  
-M_9 <-  merge(M_8,marketingdata,by = "seller_id",all.x = T)
-dim(M_8)
-dim(marketingdata)
-dim(M_9)
+M_9 <-  merge(M_8,marketingdata,by = "seller_id")
 ```
 
-
-
-#分析賣家人格
+#分析
 ```{r}
 A_1 <- M_9 %>% group_by(lead_behaviour_profile,business_segment) %>% summarise(
   n_business = n(),
@@ -219,7 +211,7 @@ colnames(score_lm)
 model <- lm(score ~ . ,data = score_lm[,c(2:12)])
 summary(model)
 ```
-# 把state轉成數量跑分析(X)
+
 ```{r}
 score2 = score
 
@@ -234,6 +226,7 @@ model <- lm(score ~ . ,data = score_lm2[,c(3:10,12,13)])
 summary(model)
 ```
 
+<<<<<<< HEAD
 
 ```{r}
 str(M_9)
@@ -309,6 +302,8 @@ dygraph(plot,main = "Olist新進買賣家及訂單數走勢") %>%
 
 
 
+=======
+>>>>>>> 42cec5fb15e8a99b29e96b72b5cb35ae8abb756b
 ################################################
 ################以下王誠歆部分##################
 ################################################
@@ -337,26 +332,15 @@ pie(table18[1:5],main="2018")
 ################################################
 ################以下黃柏勳部分##################
 ################################################
-
-# 找出銷售類別最多的產品
 ```{r}
-#讀取資料
-bs_olist.p <- olist_products_dataset.csv #32,951 products 
-table(bs_olist.p$product_category_name) %>% sort(decreasing = TRUE) #cama_mesa_banho 3029
-```
-
-
-```{r}
+#尋找出銷售最高的產品
+bs_olist.p <- olist_products_dataset.csv ##32,951 consumers 
+table(bs_olist.p$product_category_name) %>% sort(decreasing = TRUE) ##消費最多是 cama_mesa_banho 3029
+ 
 #
 v <- mutate(bs_olist.p, product_volume= product_length_cm*product_height_cm*product_width_cm)
 ggplot(v, aes(product_photos_qty, product_name_lenght))+ geom_point()
-ggplot(v, aes(product_category_name,product_volume))+ geom_point()
-colnames(v)
-
-```
-
-
-```{r}
+ggplot(v, aes(product_volume))+ geom_bar()
 table(v$product_photos_qty) ##1 photo
 table(v$product_category_name, v$product_photos_qty)
 ggplot(v,aes(product_name_lenght))+ geom_bar()  ##左尾分布 集中在接近60
@@ -576,7 +560,8 @@ sort(table(m2$business_segment))
 
 ```{r}
 #運費佔價格比例與評分的關聯，圖形上看起來，運費佔比越高，消費者對商品評價越低。但運費佔比與評價的相關係數很小
-m30=mutate(m3,fdividep=freight_value/price)
+m4<-m3[,-5]
+m30=mutate(m4,fdividep=freight_value/price)
 ggplot(m30, aes(fdividep, review_score))+  
 geom_smooth(se = FALSE) 
 model=lm(m30$fdivide~m30$review_score) 
@@ -586,14 +571,12 @@ model=lm(m30$freight_value~m30$review_score) #運費高低與評價的相關係�
 summary(model)
 cor(m30$freight_value,m30$review_score)
 
-#不同程度的運費佔比，佔商品總數百分比。可見多達75.759%的商品，其運費佔比小於0.4
-C2=mutate(orderitems,fdividep2=freight_value/price) #C2含有112650 obs.
-summarise(filter(C2, fdividep2 < 0.1 ),n())/112650      
-summarise(filter(filter(C2, fdividep2 < 0.2), fdividep2 >= 0.1),n())/112650  
-summarise(filter(filter(C2, fdividep2 < 0.3), fdividep2 >= 0.2),n())/112650 
-summarise(filter(filter(C2, fdividep2 < 0.4), fdividep2 >= 0.3),n())/112650  
-summarise(filter(C2, fdividep2 >= 0.4),n())/112650      
-hist(C2$fdividep2,las=2,freq=T,xlab="運費佔比",ylab="數量",main="運費佔比的數量")
+summarise(filter(m30, fdividep < 0.1 ),n())/112650      
+summarise(filter(filter(m30, fdividep < 0.2), fdividep >= 0.1),n())/112650  
+summarise(filter(filter(m30, fdividep < 0.3), fdividep >= 0.2),n())/112650 
+summarise(filter(filter(m30, fdividep < 0.4), fdividep >= 0.3),n())/112650  
+summarise(filter(m30, fdividep >= 0.4),n())/112650      
+hist(m30$fdividep,las=2,freq=T,xlab="運費佔比",ylab="數量",main="運費佔比的數量")
 ```
 
 ```{r}
