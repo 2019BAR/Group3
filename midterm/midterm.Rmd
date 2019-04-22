@@ -17,7 +17,7 @@ if(!require(pacman)) install.packages("pacman")
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
 ###工具
-packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio")
+packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio","plotly", "googleVis","latticeExtra","dygraphs")
 
 existing = as.character(installed.packages()[,1])
 for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
@@ -237,12 +237,76 @@ summary(model)
 
 ```{r}
 str(M_9)
-class(M_9[,8])
-M_9[,8]=as.POSIXct(M_9[,8], format="%Y-%m-%d")
-M_9$time <- format(M_9$order_purchase_timestamp,"%Y%m")
-  
- = 
+class(M_9$time)
+class(M_9$time_group)
+
+M_9[,9]=as.POSIXct(M_9[,9], format="%Y-%m-%d")
+M_9$time_group <- format(M_9$order_purchase_timestamp,"%Y%m") %>% as.numeric()
+M_9$time <- format(M_9$order_purchase_timestamp,"%Y%m") %>% paste0(.,"28") %>% as.Date("%Y%m%d")
+
+              
+time_group <- unique(M_9$time_group) %>% sort() 
+num_seller_1 = sapply(1:length(time_group), # start by 2, so i-1 = 1
+            function(i) setdiff(M_9$seller_id[M_9$time_group==time_group[i]],unique(M_9$seller_id[M_9$time_group<time_group[i]])) %>% length)
+num_seller =  c(0,num_seller_1[-24])
+
+num_customer_1 = sapply(1:length(time_group), # start by 2, so i-1 = 1
+            function(i) setdiff(M_9$customer_unique_id[M_9$time_group==time_group[i]],unique(M_9$customer_unique_id[M_9$time_group<time_group[i]])) %>% length)
+num_customer =  c(0,num_customer_1[-24])
+
+num_order <- M_9 %>% group_by(time) %>% summarise(
+  num_order = length(unique(order_id))
+  )
+
+plot <- cbind(time=(sort(unique(M_9$time))),num_seller,num_customer,num_order[,2])
+
 ```
+
+#ggplotly_try
+```{r}
+g = ggplot(plot, mapping =aes(x=as.factor(time), y=num_order, col=num_customer)) +
+  geom_point(mapping = aes(size=num_seller)) +
+  geom_text(mapping =aes(label=time), size=0.5) +
+  theme(axis.text.x = element_text(angle=90, hjust=1, vjust=.5)) +
+  ylab("Order") +
+  xlab("Time")
+g
+ggplotly(g)  
+```
+```{r}
+library(zoo)
+library(xts)
+
+data.ts<-zoo(plot,plot[,"time"])
+plot <- data.ts[1:24,-1]
+
+dygraph(plot,main = "Olist新進買賣家及訂單數走勢") %>%
+   dySeries("num_customer", label = "新進顧客數")%>%
+   dySeries("num_order", label = "訂單數") %>%
+   dySeries("num_seller", axis = 'y2', label = "新進賣家數") %>%
+   dyOptions( axisLineColor="orange", 
+    gridLineColor="indianred" , fillGraph = F,fillAlpha = 0.2,
+    drawGrid  = TRUE,drawPoints=TRUE, pointSize = 1 ) %>% 
+   dyAxis("x", label = " 日期 ",   drawGrid = F) %>% 
+   dyAxis("y", label = " ", drawGrid = T) %>% 
+   dyHighlight(highlightCircleSize = 3,              
+    highlightSeriesBackgroundAlpha = 0.2) %>% 
+   dyOptions(colors = RColorBrewer::brewer.pal(3, 'Dark2')) %>%
+   dyRangeSelector(height = 1)
+```
+
+
+```{r}
+#
+ # --> construct separate plots for each series
+   obj1 <- xyplot(num_order ~ time, plot, type = "l" , lwd=2)
+   obj2 <- xyplot(num_customer ~ time, plot, type = "l", lwd=2)
+   obj3 <- xyplot(num_seller ~ time, plot, type = "l", lwd=2)
+ 
+   # --> Make the plot with second y axis:
+   doubleYScale(obj1, obj2, add.ylab2 = TRUE)
+```
+
 
 
 ################################################
