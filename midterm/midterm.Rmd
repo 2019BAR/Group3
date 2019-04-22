@@ -211,7 +211,7 @@ colnames(score_lm)
 model <- lm(score ~ . ,data = score_lm[,c(2:12)])
 summary(model)
 ```
-
+# 把state轉成數量跑分析(X)
 ```{r}
 score2 = score
 
@@ -254,15 +254,26 @@ pie(table18[1:5],main="2018")
 ################################################
 ################以下黃柏勳部分##################
 ################################################
+
+# 找出銷售類別最多的產品
 ```{r}
-#尋找出銷售最高的產品
-bs_olist.p <- olist_products_dataset.csv ##32,951 consumers 
-table(bs_olist.p$product_category_name) %>% sort(decreasing = TRUE) ##消費最多是 cama_mesa_banho 3029
- 
+#讀取資料
+bs_olist.p <- olist_products_dataset.csv #32,951 products 
+table(bs_olist.p$product_category_name) %>% sort(decreasing = TRUE) #cama_mesa_banho 3029
+```
+
+
+```{r}
 #
 v <- mutate(bs_olist.p, product_volume= product_length_cm*product_height_cm*product_width_cm)
 ggplot(v, aes(product_photos_qty, product_name_lenght))+ geom_point()
-ggplot(v, aes(product_volume))+ geom_bar()
+ggplot(v, aes(product_category_name,product_volume))+ geom_point()
+colnames(v)
+
+```
+
+
+```{r}
 table(v$product_photos_qty) ##1 photo
 table(v$product_category_name, v$product_photos_qty)
 ggplot(v,aes(product_name_lenght))+ geom_bar()  ##左尾分布 集中在接近60
