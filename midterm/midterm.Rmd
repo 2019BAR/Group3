@@ -74,14 +74,14 @@ custlocation<-geo %>% group_by(geolocation_city) %>% summarise(custlat = max(geo
 
 #2 時間資料處理
 ```{r}
-orders$order_approved_at<-strptime(orders$order_approved_at,format="%Y-%m-%d %H:%M:%S")
-orders$order_purchase_timestamp<-strptime(orders$order_purchase_timestamp,format="%Y-%m-%d %H:%M:%S")
-orders$order_delivered_carrier_date<-strptime(orders$order_delivered_carrier_date,format="%Y-%m-%d %H:%M:%S")
-orders$order_delivered_customer_date<-strptime(orders$order_delivered_customer_date,format="%Y-%m-%d %H:%M:%S")
-orders$order_estimated_delivery_date<-strptime(orders$order_estimated_delivery_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_approved_at<-as.POSIXlt(orders$order_approved_at,format="%Y-%m-%d %H:%M:%S")
+orders$order_purchase_timestamp<-as.POSIXlt(orders$order_purchase_timestamp,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_carrier_date<-as.POSIXlt(orders$order_delivered_carrier_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_customer_date<-as.POSIXlt(orders$order_delivered_customer_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_estimated_delivery_date<-as.POSIXlt(orders$order_estimated_delivery_date,format="%Y-%m-%d %H:%M:%S")
 
 table(orders$order_status)
-orderitems$shipping_limit_date<-strptime(orderitems$shipping_limit_date,format="%Y-%m-%d %H:%M:%S")
+orderitems$shipping_limit_date<-as.POSIXlt(orderitems$shipping_limit_date,format="%Y-%m-%d %H:%M:%S")
 ```
 
 #3 把各個資料合併
@@ -155,15 +155,23 @@ seller_TOP100 <-
   M_8 %>% group_by(seller_id,product_category_name_english) %>% summarise(
   mount = sum(price),
   num = n()) %>% arrange(desc(num)) %>% head(100)
+```
 
+# 加入新的兩筆資料
+```{r}
 seller_TOP100_2 <- merge(seller_TOP100,closed[,c(1,2,6,8,9,12)],by="seller_id",all.x = T)
 
 marketingdata <- merge(closed[,c(1,2,6,8,9,12)],marketing[,c(1,4)],by = "mql_id")
  
-M_9 <-  merge(M_8,marketingdata,by = "seller_id")
+M_9 <-  merge(M_8,marketingdata,by = "seller_id",all.x = T)
+dim(M_8)
+dim(marketingdata)
+dim(M_9)
 ```
 
-#分析
+
+
+#分析賣家人格
 ```{r}
 A_1 <- M_9 %>% group_by(lead_behaviour_profile,business_segment) %>% summarise(
   n_business = n(),
@@ -225,6 +233,17 @@ colnames(score_lm2)
 model <- lm(score ~ . ,data = score_lm2[,c(3:10,12,13)])
 summary(model)
 ```
+
+
+```{r}
+str(M_9)
+class(M_9[,8])
+M_9[,8]=as.POSIXct(M_9[,8], format="%Y-%m-%d")
+M_9$time <- format(M_9$order_purchase_timestamp,"%Y%m")
+  
+ = 
+```
+
 
 ################################################
 ################以下王誠歆部分##################
