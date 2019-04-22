@@ -438,7 +438,8 @@ library(maps)
 score <- E %>%
 group_by(seller_city) %>% 
   summarise(
-  score = mean(review_score)
+  score = mean(review_score),
+  pricesum = sum(price)+sum(freight_value)
   ) 
 ```
 
@@ -456,38 +457,40 @@ summarise(
   seller_city = geolocation_city[1],
   state = geolocation_state[1]
   )
-```
-
-
-```{r}
-#merge score of cities and geo of cities so that we can use leaflet
-city_score <- merge(score,geolocation,by="seller_city")
-city_score_fig <- leaflet() %>% 
-  addTiles()  %>%
-  addCircleMarkers(
-    lng     = city_score$lng,
-    lat     = city_score$lat,
-    label   = city_score$seller_city,
-    color   = city_score$score,
-    labelOptions = labelOptions(noHide = F) ,
-    options = popupOptions(closeButton = FALSE)
-  )
-```
-
-
 
 #draw review of each state and use addPolygon to fig
-```{r}
-state_score <- city_score %>% group_by(state) %>%
-  summarise(
-  score = mean(score)
-  )
+city_score <- merge(score,geolocation,by="seller_city")
+state_score <- city_score %>%
+group_by(state) %>%
+summarise(
+  score = mean(score),
+  pricesum = sum(pricesum)
+)
 
-```
+#import Brazill json data 
+library(geojsonio)
+library(leaflet)
+states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
 
-```{r}
-#import Brazil json data 
-states <- geojsonio::geojson_read("C:\\Users\\User\\Desktop\\Group3\\midterm\\Brazil.json", what = "sp")
+#color setting
+bins_score <- c(0,1.0,2.0,3.0,4.0,5.0)
+bins_money <- c(0,500,5000,10000,50000,100000,1000000,Inf)
+pal_score <- colorBin("Blues", domain = state_score$score, bins = bins_score)
+pal_money <- colorBin("Reds"  ,domain = state_score$pricesum, bins = bins_money)
+
+#add score Info of State
+labels <- sprintf(
+  "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
+  state_score$state, 
+  state_score$score,
+  state_score$pricesum
+) %>% lapply(htmltools::HTML)
+citylabels <- sprintf(
+  "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
+  city_score$seller_city, 
+  city_score$score,
+  city_score$pricesum
+)%>% lapply(htmltools::HTML)
 
 #form a map of Brazil 
 map_Brazil <- leaflet(states) %>%
@@ -496,23 +499,29 @@ map_Brazil <- leaflet(states) %>%
     id = "mapbox.light",
     accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
 map_Brazil %>% addPolygons()
-```
 
-```{r}
-#color setting
-bins <- c(0,1.0,2.0,3.0,4.0,5.0)
-pal <- colorBin("YlOrRd", domain = state_score$score, bins = bins)
-#add Info
-labels <- sprintf(
-  "<strong>%s</strong><br/>  score: %g ",
-  state_score$state, state_score$score
-) %>% lapply(htmltools::HTML)
+#draw city inform
+map_Brazil <- map_Brazil %>%
+  addCircleMarkers(
+    lng     = city_score$lng,
+    lat     = city_score$lat,
+    label   = citylabels,
+    weight  = .1, 
+    color   = "Yellow",
+    labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 4px"),
+    textsize = "15px",
+    direction = "auto"),
+    options = popupOptions(closeButton = TRUE),
+    group = "city"
+  )      
 ```
-
+#draw state labels
 ```{r}
-#Just draw it!
-map_Brazil <- map_Brazil %>% addPolygons(
-  fillColor = ~pal(state_score$score),
+map_Brazil <- map_Brazil %>% 
+#add state score information 
+addPolygons(
+  fillColor = ~pal_score(state_score$score),
   weight = 2,
   opacity = 1,
   color = "white",
@@ -528,11 +537,39 @@ map_Brazil <- map_Brazil %>% addPolygons(
   labelOptions = labelOptions(
     style = list("font-weight" = "normal", padding = "3px 8px"),
     textsize = "15px",
-    direction = "auto"))
-##add legend 
-map_Brazil <- map_Brazil %>%
-addLegend(pal = pal, values = ~state_score$score, opacity = 0.7, title = "average score",
-  position = "topright")
+    direction = "auto"),
+  group = "state_score"
+  )  %>%
+#add state price information 
+  addPolygons(
+  fillColor = ~pal_money(state_score$pricesum),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  dashArray = "3",
+  fillOpacity = 0.7,
+  highlight = highlightOptions(
+    weight = 5,
+    color = "#666",
+    dashArray = "",
+    fillOpacity = 0.7,
+    bringToFront = TRUE),
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"),
+  group = "state_price"
+  ) %>% 
+# add layer Control 
+  addLayersControl(
+    overlayGroups  = c("state_score","state_price","city")
+  ) %>% 
+#add legens 
+addLegend(pal = pal_money, values = ~state_score$pricesum ,opacity =0.7,title = "price legend",
+  position = "bottomleft" ) %>%
+addLegend(pal = pal_score, values = ~state_score$score, opacity = 0.7, title = "score legend",
+  position = "bottomleft") 
 ```
 
 #結果
