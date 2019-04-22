@@ -1,5 +1,5 @@
 ---
-title: "R <e6><9c> Midterm"
+title: "R 期中競賽 第三組"
 output:
   html_document:
     df_print: paged
@@ -16,11 +16,13 @@ if(!require(pacman)) install.packages("pacman")
 ```
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
-library(dplyr)
-library(ggplot2)
-library(tidyverse)
-library(ggthemes)
-library(data.table)
+###工具
+packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio")
+
+existing = as.character(installed.packages()[,1])
+for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
+
+sapply(packages,library, character.only = T)
 ```
 
 ###共同區域###
@@ -59,29 +61,191 @@ marketing <- olist_marketing_qualified_leads_dataset.csv
 ################################################
 ################以下王欣部分####################
 ################################################
+###前處理
 
-#1 items & payments
+#1 地理資料整理
 ```{r}
-payments <- olist_order_payments_dataset.csv #103886X5
-items <- olist_order_items_dataset.csv #112650X7
-products <- olist_products_dataset.csv #32951X9
+geo$geolocation_lat<-round(geo$geolocation_lat,3)
+geo$geolocation_lng<-round(geo$geolocation_lng,3)
+
+selllocation<-geo %>% group_by(geolocation_city) %>% summarise(selllat = max(geolocation_lat),selllng=max(geolocation_lng))
+custlocation<-geo %>% group_by(geolocation_city) %>% summarise(custlat = max(geolocation_lat),custlng=max(geolocation_lng))
+```
+
+#2 時間資料處理
+```{r}
+orders$order_approved_at<-strptime(orders$order_approved_at,format="%Y-%m-%d %H:%M:%S")
+orders$order_purchase_timestamp<-strptime(orders$order_purchase_timestamp,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_carrier_date<-strptime(orders$order_delivered_carrier_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_customer_date<-strptime(orders$order_delivered_customer_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_estimated_delivery_date<-strptime(orders$order_estimated_delivery_date,format="%Y-%m-%d %H:%M:%S")
+
+table(orders$order_status)
+orderitems$shipping_limit_date<-strptime(orderitems$shipping_limit_date,format="%Y-%m-%d %H:%M:%S")
+```
+
+#3 把各個資料合併
+```{r}
+M_1 <- merge(orderitems,sellers,by.x="seller_id",by.y="seller_id")
+M_2 <- merge(orders,cust,by.x="customer_id",by.y="customer_id")
+M_3 <- merge(M_2,M_1,by="order_id")
+M_4 <- merge(M_3,products,by="product_id")
+M_5 <- merge(M_4,payments,by="order_id")
+M_6 <- merge(M_5,selllocation,by.x="seller_city",by.y="geolocation_city")
+M_7 <- merge(M_6,custlocation,by.x="customer_city",by.y="geolocation_city")
+
+colnames(nametrans) <- c("product_category_name","product_category_name_english")
+
+```
+
+#4 計算買賣家之間的距離
+```{r}
+dist_list <- list()
+
+for (i in 1:nrow(M_7)) {
+  
+  dist_list[[i]] <- gdist(lon.1 = M_7$selllng[i], 
+                          lat.1 = M_7$selllat[i], 
+                          lon.2 = M_7$custlng[i], 
+                          lat.2 = M_7$custlat[i], 
+                          units="miles")
+  
+}
+M_7$distbtwn<-as.integer(dist_list)
+M_8<-merge(M_7,nametrans,by="product_category_name")
+```
+
+#5 置入巴西地理資料
+```{r}
+Brazil<-map_data("world") %>% filter(region=="Brazil")
+
+#排除界外外的資料
+M_8 = M_8[M_8$selllat <= 5.27438888,]
+M_8 = M_8[M_8$custlat <= 5.27438888,]
+```
+
+#畫出賣家所在地
+```{r}
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_8,aes(x=selllng,y=selllat,color=seller_state),size=0.2)
+```
+
+#畫出買家所在地
+```{r}
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_8,aes(x=custlng,y=custlat,color=customer_state),size=0.2)
+```
+
+#各產品類別銷售情況及所在地
+```{r}
+ggplot() +
+  geom_bar(data= M_8,aes(product_category_name_english,fill=seller_state),width=1)+ coord_flip()
+```
+
+#賣家所在地數量
+```{r}
+ggplot() +
+  geom_bar(data= M_8,aes(seller_state,fill=seller_state),width=1)
+```
+#6 找出前100大賣家
+```{r}
+seller_TOP100 <-
+  M_8 %>% group_by(seller_id,product_category_name_english) %>% summarise(
+  mount = sum(price),
+  num = n()) %>% arrange(desc(num)) %>% head(100)
+
+seller_TOP100_2 <- merge(seller_TOP100,closed[,c(1,2,6,8,9,12)],by="seller_id",all.x = T)
+
+marketingdata <- merge(closed[,c(1,2,6,8,9,12)],marketing[,c(1,4)],by = "mql_id")
+ 
+M_9 <-  merge(M_8,marketingdata,by = "seller_id")
+```
+
+#分析
+```{r}
+A_1 <- M_9 %>% group_by(lead_behaviour_profile,business_segment) %>% summarise(
+  n_business = n(),
+  mount = sum(price),
+  every_mount = mount/n_business
+  )  %>% arrange(desc(lead_behaviour_profile))
+   
+table(A_1$lead_behaviour_profile) 
+```
+```{r}
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_9,aes(x=custlng,y=custlat,color=lead_behaviour_profile),size=0.2)
+
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_9[M_9$lead_behaviour_profile=="wolf",],aes(x=custlng,y=custlat,color=lead_behaviour_profile),size=0.2)
+```
+
+#7 找對評分的重要變數
+```{r}
+M_9 %>% colnames() #2:4,9:11,15,17,19:20,22,24,25,32,38
+score <- M_9[,c(5,10:12,16,17,19,20,22,24,25,32,38)] %>% group_by(order_id) %>% summarise(
+  ship13 = mean(order_delivered_customer_date-order_approved_at),
+  ship12 = mean(order_delivered_carrier_date-order_approved_at),
+  ship23 = mean(order_delivered_customer_date-order_delivered_carrier_date),
+  ship_ratio = mean(freight_value/price),
+  description = sum(product_description_lenght)/max(order_item_id),
+  photo_num = sum(product_photos_qty)/max(order_item_id),
+  pay_installment = sum(payment_installments)/max(order_item_id),
+  dist = sum(distbtwn)/max(order_item_id),
+  customer_state = head(customer_state,1),
+  seller_state = head(seller_state,1)
+)  
+
+reviews2 <- reviews %>% group_by(order_id) %>% summarise(
+  score = mean(review_score)
+)
+```
+
+#8 回歸模型
+```{r}
+score_lm<-merge(score,reviews2,by="order_id")
+colnames(score_lm)
+model <- lm(score ~ . ,data = score_lm[,c(2:12)])
+summary(model)
 ```
 
 ```{r}
-str(payments)
-str(items)
-str(products)
+score2 = score
+
+score2$customer_state <-  factor(score2$customer_state,ordered=TRUE)
+state_transfer <- levels(score2$customer_state) %>% as.data.frame()
+state_transfer$state_num <- sample(1:26) 
+names(state_transfer) <- c("customer_state","state_num")
+  
+score_lm2<-merge(score_lm,state_transfer)
+colnames(score_lm2)
+model <- lm(score ~ . ,data = score_lm2[,c(3:10,12,13)])
+summary(model)
 ```
-
-```{r}
-items[items$product_id=="4244733e06e7ecb4970a6e2683c13e61",]
-
-```
-
 
 ################################################
 ################以下王誠歆部分##################
 ################################################
+
+```{r}
+product_year=data.frame(year=format(M_8$order_purchase_timestamp,"%Y"),product=M_8$product_category_name_english)
+product2016=subset(product_year,year==2016)
+table16=table(product2016$product)
+product2017=subset(product_year,year==2017)
+table17=table(product2017$product)
+product2018=subset(product_year,year==2018)
+table18=table(product2018$product)
+table16=sort(table16,decreasing=TRUE) %>% head(10) #2016年銷售前10名
+table17=sort(table17,decreasing=TRUE) %>% head(10) #2017年銷售前10名
+
+pie(table16[1:5],main="2016")
+pie(table17[1:5],main="2017")
+pie(table18[1:5],main="2018")
+```
+
 
 ################################################
 ################以下張延瑋部分##################
@@ -128,7 +292,7 @@ ggplot(dfts, aes(ts.bym),las=1)+ geom_bar() ##最多銷售月份為2018-1-1
 ##每日尖峰時段
 ts.byH <- format(ts,format="%H") %>% data.frame()
 ggplot(ts.byH ,aes(.))+ geom_bar()
-table(ts.byH)ㄩ
+table(ts.byH)
 ```
 
 ```{r}
@@ -177,6 +341,7 @@ onece <- group_by(WWWW, product_category_name_english) %>% summarise(mean=mean(p
 ################################################
 ################以下孫嘉力部分##################
 ################################################
+```{r}
 #數據定義同公共部分
 reviews <-olist_order_reviews_dataset.csv
 orderitms <- olist_order_items_dataset.csv
@@ -185,7 +350,9 @@ sellers <-  olist_sellers_dataset.csv
 A<-merge(x = reviews , y = orderitems, by = "order_id")
 #E <- review of sellers with order information
 E<-merge(x = A , y = sellers, by = "seller_id")
+```
 
+```{r}
 library(dplyr)
 library(leaflet)
 library(maps)
@@ -193,9 +360,12 @@ library(maps)
 score <- E %>%
 group_by(seller_city) %>% 
   summarise(
-  score = mean(review_score)
+  score = mean(review_score),
+  pricesum = sum(price)+sum(freight_value)
   ) 
+```
 
+```{r}
 #geolocation: private dataframe, with state,lon and lat of each city
 geolocation <- olist_geolocation_dataset.csv
 geolocation['seller_city'] = geo['geolocation_city']
@@ -209,9 +379,25 @@ summarise(
   seller_city = geolocation_city[1],
   state = geolocation_state[1]
   )
+<<<<<<< HEAD
+#draw review of each state and use addPolygon to fig
+city_score <- merge(score,geolocation,by="seller_city")
+state_score <- city_score %>%
+group_by(state) %>%
+summarise(
+  score = mean(score),
+  pricesum = sum(pricesum)
+)
+
+#import Brazill json data 
+library(geojsonio)
+library(leaflet)
+states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
+=======
+```
 
 
-
+```{r}
 #merge score of cities and geo of cities so that we can use leaflet
 city_score <- merge(score,geolocation,by="seller_city")
 city_score_fig <- leaflet() %>% 
@@ -224,17 +410,44 @@ city_score_fig <- leaflet() %>%
     labelOptions = labelOptions(noHide = F) ,
     options = popupOptions(closeButton = FALSE)
   )
+```
+
+
 
 #draw review of each state and use addPolygon to fig
-state_score <- city_score %>%
-group_by(state) %>%
-summarise(
+```{r}
+state_score <- city_score %>% group_by(state) %>%
+  summarise(
   score = mean(score)
-)
+  )
 
-#import Brazill json data 
-install.packages(geojsonio)
-states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
+```
+
+```{r}
+#import Brazil json data 
+states <- geojsonio::geojson_read("C:\\Users\\User\\Desktop\\Group3\\midterm\\Brazil.json", what = "sp")
+>>>>>>> 42cec5fb15e8a99b29e96b72b5cb35ae8abb756b
+
+#color setting
+bins_score <- c(0,1.0,2.0,3.0,4.0,5.0)
+bins_money <- c(0,500,5000,10000,50000,100000,1000000,Inf)
+pal_score <- colorBin("Blues", domain = state_score$score, bins = bins_score)
+pal_money <- colorBin("Reds"  ,domain = state_score$pricesum, bins = bins_money)
+
+#add score Info of State
+labels <- sprintf(
+  "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
+  state_score$state, 
+  state_score$score,
+  state_score$pricesum
+) %>% lapply(htmltools::HTML)
+
+citylabels <- sprintf(
+  "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
+  city_score$seller_city, 
+  city_score$score,
+  city_score$pricesum
+)%>% lapply(htmltools::HTML)
 
 #form a map of Brazil 
 map_Brazil <- leaflet(states) %>%
@@ -243,7 +456,32 @@ map_Brazil <- leaflet(states) %>%
     id = "mapbox.light",
     accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
 map_Brazil %>% addPolygons()
+```
 
+<<<<<<< HEAD
+#draw city inform
+map_Brazil <- map_Brazil %>%
+  addCircleMarkers(
+    lng     = city_score$lng,
+    lat     = city_score$lat,
+    label   = citylabels,
+    weight  = .1, 
+    color   = "Brown",
+    labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 4px"),
+    textsize = "15px",
+    direction = "auto"),
+    options = popupOptions(closeButton = TRUE),
+    group = "city"
+  )      
+map_Brazil
+#draw state labels
+map_Brazil <- map_Brazil %>% 
+#add state score information 
+addPolygons(
+  fillColor = ~pal_score(state_score$score),
+=======
+```{r}
 #color setting
 bins <- c(0,1.0,2.0,3.0,4.0,5.0)
 pal <- colorBin("YlOrRd", domain = state_score$score, bins = bins)
@@ -252,10 +490,13 @@ labels <- sprintf(
   "<strong>%s</strong><br/>  score: %g ",
   state_score$state, state_score$score
 ) %>% lapply(htmltools::HTML)
+```
 
+```{r}
 #Just draw it!
 map_Brazil <- map_Brazil %>% addPolygons(
   fillColor = ~pal(state_score$score),
+>>>>>>> 42cec5fb15e8a99b29e96b72b5cb35ae8abb756b
   weight = 2,
   opacity = 1,
   color = "white",
@@ -271,13 +512,55 @@ map_Brazil <- map_Brazil %>% addPolygons(
   labelOptions = labelOptions(
     style = list("font-weight" = "normal", padding = "3px 8px"),
     textsize = "15px",
+<<<<<<< HEAD
+    direction = "auto"),
+  group = "state_score"
+  )  %>%
+#add state price information 
+  addPolygons(
+  fillColor = ~pal_money(state_score$pricesum),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  dashArray = "3",
+  fillOpacity = 0.7,
+  highlight = highlightOptions(
+    weight = 5,
+    color = "#666",
+    dashArray = "",
+    fillOpacity = 0.7,
+    bringToFront = TRUE),
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"),
+  group = "state_price"
+  ) %>% 
+# add layer Control 
+  addLayersControl(
+    overlayGroups  = c("state_score","state_price","city")
+  ) %>% 
+#add legens 
+addLegend(pal = pal_money, values = ~state_score$pricesum ,opacity =0.7,title = "price legend",
+  position = "bottomleft" ) %>%
+addLegend(pal = pal_score, values = ~state_score$score, opacity = 0.7, title = "score legend",
+  position = "bottomleft") 
+=======
     direction = "auto"))
 ##add legend 
 map_Brazil <- map_Brazil %>%
 addLegend(pal = pal, values = ~state_score$score, opacity = 0.7, title = "average score",
   position = "topright")
+```
+>>>>>>> 42cec5fb15e8a99b29e96b72b5cb35ae8abb756b
 
+#結果
+```{r}
 map_Brazil
+```
+
+
 ################################################
 ################以下李璨宇部分##################
 ################################################
@@ -297,7 +580,8 @@ sort(table(m2$business_segment))
 
 ```{r}
 #運費佔價格比例與評分的關聯，圖形上看起來，運費佔比越高，消費者對商品評價越低。但運費佔比與評價的相關係數很小
-m30=mutate(m3,fdividep=freight_value/price)
+m4<-m3[,-5]
+m30=mutate(m4,fdividep=freight_value/price)
 ggplot(m30, aes(fdividep, review_score))+  
 geom_smooth(se = FALSE) 
 model=lm(m30$fdivide~m30$review_score) 
@@ -307,14 +591,12 @@ model=lm(m30$freight_value~m30$review_score) #運費高低與評價的相關係�
 summary(model)
 cor(m30$freight_value,m30$review_score)
 
-#不同程度的運費佔比，佔商品總數百分比。可見多達75.759%的商品，其運費佔比小於0.4
-C2=mutate(orderitems,fdividep2=freight_value/price) #C2含有112650 obs.
-summarise(filter(C2, fdividep2 < 0.1 ),n())/112650      
-summarise(filter(filter(C2, fdividep2 < 0.2), fdividep2 >= 0.1),n())/112650  
-summarise(filter(filter(C2, fdividep2 < 0.3), fdividep2 >= 0.2),n())/112650 
-summarise(filter(filter(C2, fdividep2 < 0.4), fdividep2 >= 0.3),n())/112650  
-summarise(filter(C2, fdividep2 >= 0.4),n())/112650      
-hist(C2$fdividep2,las=2,freq=T,xlab="運費佔比",ylab="數量",main="運費佔比的數量")
+summarise(filter(m30, fdividep < 0.1 ),n())/112650      
+summarise(filter(filter(m30, fdividep < 0.2), fdividep >= 0.1),n())/112650  
+summarise(filter(filter(m30, fdividep < 0.3), fdividep >= 0.2),n())/112650 
+summarise(filter(filter(m30, fdividep < 0.4), fdividep >= 0.3),n())/112650  
+summarise(filter(m30, fdividep >= 0.4),n())/112650      
+hist(m30$fdividep,las=2,freq=T,xlab="運費佔比",ylab="數量",main="運費佔比的數量")
 ```
 
 ```{r}
