@@ -238,12 +238,9 @@ product2017=subset(product_year,year==2017)
 table17=table(product2017$product)
 product2018=subset(product_year,year==2018)
 table18=table(product2018$product)
-table16=sort(table16,decreasing=TRUE) 
-table17=sort(table17,decreasing=TRUE)
-table18=sort(table18,decreasing=TRUE) 
-table16[1:10]       #2016年銷售前10名
-table17[1:10]       #2017年銷售前10名
-table18[1:10]       #2018年銷售前10名
+table16=sort(table16,decreasing=TRUE) %>% head(10) #2016年銷售前10名
+table17=sort(table17,decreasing=TRUE) %>% head(10) #2017年銷售前10名
+
 pie(table16[1:5],main="2016")
 pie(table17[1:5],main="2017")
 pie(table18[1:5],main="2018")
