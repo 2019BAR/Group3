@@ -379,7 +379,7 @@ summarise(
   seller_city = geolocation_city[1],
   state = geolocation_state[1]
   )
-<<<<<<< HEAD
+
 #draw review of each state and use addPolygon to fig
 city_score <- merge(score,geolocation,by="seller_city")
 state_score <- city_score %>%
@@ -393,40 +393,6 @@ summarise(
 library(geojsonio)
 library(leaflet)
 states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\d3js-geojson\\Brazil.json", what = "sp")
-=======
-```
-
-
-```{r}
-#merge score of cities and geo of cities so that we can use leaflet
-city_score <- merge(score,geolocation,by="seller_city")
-city_score_fig <- leaflet() %>% 
-  addTiles()  %>%
-  addCircleMarkers(
-    lng     = city_score$lng,
-    lat     = city_score$lat,
-    label   = city_score$seller_city,
-    color   = city_score$score,
-    labelOptions = labelOptions(noHide = F) ,
-    options = popupOptions(closeButton = FALSE)
-  )
-```
-
-
-
-#draw review of each state and use addPolygon to fig
-```{r}
-state_score <- city_score %>% group_by(state) %>%
-  summarise(
-  score = mean(score)
-  )
-
-```
-
-```{r}
-#import Brazil json data 
-states <- geojsonio::geojson_read("C:\\Users\\User\\Desktop\\Group3\\midterm\\Brazil.json", what = "sp")
->>>>>>> 42cec5fb15e8a99b29e96b72b5cb35ae8abb756b
 
 #color setting
 bins_score <- c(0,1.0,2.0,3.0,4.0,5.0)
@@ -441,7 +407,6 @@ labels <- sprintf(
   state_score$score,
   state_score$pricesum
 ) %>% lapply(htmltools::HTML)
-
 citylabels <- sprintf(
   "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
   city_score$seller_city, 
@@ -456,9 +421,7 @@ map_Brazil <- leaflet(states) %>%
     id = "mapbox.light",
     accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
 map_Brazil %>% addPolygons()
-```
 
-<<<<<<< HEAD
 #draw city inform
 map_Brazil <- map_Brazil %>%
   addCircleMarkers(
@@ -466,7 +429,7 @@ map_Brazil <- map_Brazil %>%
     lat     = city_score$lat,
     label   = citylabels,
     weight  = .1, 
-    color   = "Brown",
+    color   = "Yellow",
     labelOptions = labelOptions(
     style = list("font-weight" = "normal", padding = "3px 4px"),
     textsize = "15px",
@@ -474,29 +437,13 @@ map_Brazil <- map_Brazil %>%
     options = popupOptions(closeButton = TRUE),
     group = "city"
   )      
-map_Brazil
+```
 #draw state labels
+```{r}
 map_Brazil <- map_Brazil %>% 
 #add state score information 
 addPolygons(
   fillColor = ~pal_score(state_score$score),
-=======
-```{r}
-#color setting
-bins <- c(0,1.0,2.0,3.0,4.0,5.0)
-pal <- colorBin("YlOrRd", domain = state_score$score, bins = bins)
-#add Info
-labels <- sprintf(
-  "<strong>%s</strong><br/>  score: %g ",
-  state_score$state, state_score$score
-) %>% lapply(htmltools::HTML)
-```
-
-```{r}
-#Just draw it!
-map_Brazil <- map_Brazil %>% addPolygons(
-  fillColor = ~pal(state_score$score),
->>>>>>> 42cec5fb15e8a99b29e96b72b5cb35ae8abb756b
   weight = 2,
   opacity = 1,
   color = "white",
@@ -546,14 +493,7 @@ addLegend(pal = pal_money, values = ~state_score$pricesum ,opacity =0.7,title = 
   position = "bottomleft" ) %>%
 addLegend(pal = pal_score, values = ~state_score$score, opacity = 0.7, title = "score legend",
   position = "bottomleft") 
-=======
-    direction = "auto"))
-##add legend 
-map_Brazil <- map_Brazil %>%
-addLegend(pal = pal, values = ~state_score$score, opacity = 0.7, title = "average score",
-  position = "topright")
 ```
->>>>>>> 42cec5fb15e8a99b29e96b72b5cb35ae8abb756b
 
 #結果
 ```{r}
