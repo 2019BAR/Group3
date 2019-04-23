@@ -378,7 +378,7 @@ table(ts.byH)
 
 a <- merge(olist_orders_dataset.csv, olist_order_items_dataset.csv, by.x = "order_id")
 b <- merge(a, olist_products_dataset.csv, by.x = "product_id")
-c <- merge(b, product_category_name_translation.csv, by.x= "product_category_name")
+c <- merge(b, product_category_name_translation.csv, by.x= "product_category_name", by.y="ï..product_category_name")
 
 D <- select(c,product_category_name_english, order_purchase_timestamp)
 
@@ -399,6 +399,20 @@ DD.byh <- format(DD,format="%H")
 D$byh <- DD.byh
 ##table(D$product_category_name_english, D$byh)
 ggplot(D, aes(product_category_name_english, fill=byh, width=1))+ geom_bar()+coord_flip()##按照時間點的銷售量
+
+#按照小時區分heatmap版本
+#Rearranging data from D data frame
+deaf = select(D, product_category_name_english,byh)
+shook = group_by(deaf, byh, product_category_name_english) %>% summarise(n=n())
+jump = spread(shook, byh, n)
+jump[is.na(jump)] <- 0 
+
+#Converting product category column into rowname
+jump = column_to_rownames(jump, var = "product_category_name_english")
+
+jump = as.matrix(jump)
+#Using plot_ly () to draw the interactive heatmap
+plot_ly(x=colnames(jump), y=rownames(jump), z = jump, type = "heatmap")
 ```
 
 
