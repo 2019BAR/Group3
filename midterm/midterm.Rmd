@@ -17,7 +17,7 @@ if(!require(pacman)) install.packages("pacman")
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
 ###工具
-packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio","plotly", "googleVis","latticeExtra","dygraphs","zoo")
+packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio","plotly", "googleVis","latticeExtra","dygraphs","zoo","GGally")
 
 existing = as.character(installed.packages()[,1])
 for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
@@ -250,43 +250,55 @@ dygraph(plot,main = "Olist新進買賣家及訂單數走勢") %>%
 #8 找對評分的重要變數
 ```{r}
 M_9 %>% colnames() #2:4,9:11,15,17,19:20,22,24,25,32,38
-score <- M_9[,c(5,10:12,16,17,19,20,22,24,25,32,38)] %>% group_by(order_id) %>% summarise(
+score <- M_9[,c(5,10:12,16,17,19,20,22,24:29,32,38,46)] %>% group_by(order_id) %>% summarise(
   ship13 = mean(order_delivered_customer_date-order_approved_at),
   ship12 = mean(order_delivered_carrier_date-order_approved_at),
   ship23 = mean(order_delivered_customer_date-order_delivered_carrier_date),
   ship_ratio = mean(freight_value/price),
+  price = sum(price),
+  AVEvolume = sum(product_length_cm*product_height_cm*product_width_cm)/max(order_item_id),
   description = sum(product_description_lenght)/max(order_item_id),
   photo_num = sum(product_photos_qty)/max(order_item_id),
   pay_installment = sum(payment_installments)/max(order_item_id),
   dist = sum(distbtwn)/max(order_item_id),
-  customer_state = head(customer_state,1),
-  seller_state = head(seller_state,1)
+  customer_state = customer_state[1],
+  seller_state = seller_state[1],
+  time_group = time_group[1]
 )  
+
+
 
 reviews2 <- reviews %>% group_by(order_id) %>% summarise(
   score = mean(review_score)
 )
 ```
-#8 回歸模型
+# 建置對評分的回歸模型
 ```{r}
 score_lm<-merge(score,reviews2,by="order_id")
-colnames(score_lm)
-model <- lm(score ~ . ,data = score_lm[,c(2:12)])
+score_lm[,2:4] <- sapply(score_lm[,2:4], as.numeric)
+score_lm <- score_lm[complete.cases(score_lm),]
+
+```
+
+#回歸結果
+```{r}
+model <- lm(score ~ . ,data = score_lm[,c(2:15)])
 summary(model)
 ```
-# 把state轉成數量跑分析(X)
-```{r}
-score2 = score
 
-score2$customer_state <-  factor(score2$customer_state,ordered=TRUE)
-state_transfer <- levels(score2$customer_state) %>% as.data.frame()
-state_transfer$state_num <- sample(1:26) 
-names(state_transfer) <- c("customer_state","state_num")
-  
-score_lm2<-merge(score_lm,state_transfer)
-colnames(score_lm2)
-model <- lm(score ~ . ,data = score_lm2[,c(3:10,12,13)])
-summary(model)
+#相關係數視覺化
+```{r}
+# Libraries
+library(GGally)
+
+# Check correlation between variables
+cor(score_lm[,c(2:11,14,15)]) 
+ 
+# Check correlations (as scatterplots), distribution and print corrleation coefficient 
+#ggpairs(score_lm[,c(2:11,14,15)]) 
+ 
+# Nice visualization of correlations
+ggcorr(score_lm[,c(2:11,14,15)], method = c("everything", "pearson")) 
 ```
 
 
