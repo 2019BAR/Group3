@@ -478,6 +478,7 @@ m3<-merge(x = m1, y = sellers, by = "seller_id")
 Q <- group_by(m2,business_segment)%>%summarize(score=mean(review_score))
 arrange(Q,score)
 sort(table(m2$business_segment))
+
 ```
 
 ```{r}
