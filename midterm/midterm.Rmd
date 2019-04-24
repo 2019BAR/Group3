@@ -17,7 +17,11 @@ if(!require(pacman)) install.packages("pacman")
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
 ###工具
+<<<<<<< HEAD
 packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio","plotly")
+=======
+packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio","plotly", "googleVis","latticeExtra","dygraphs","zoo","GGally")
+>>>>>>> fec85f679092c3d2d24ac993a9952e2fdab94524
 
 existing = as.character(installed.packages()[,1])
 for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
@@ -74,14 +78,14 @@ custlocation<-geo %>% group_by(geolocation_city) %>% summarise(custlat = max(geo
 
 #2 時間資料處理
 ```{r}
-orders$order_approved_at<-strptime(orders$order_approved_at,format="%Y-%m-%d %H:%M:%S")
-orders$order_purchase_timestamp<-strptime(orders$order_purchase_timestamp,format="%Y-%m-%d %H:%M:%S")
-orders$order_delivered_carrier_date<-strptime(orders$order_delivered_carrier_date,format="%Y-%m-%d %H:%M:%S")
-orders$order_delivered_customer_date<-strptime(orders$order_delivered_customer_date,format="%Y-%m-%d %H:%M:%S")
-orders$order_estimated_delivery_date<-strptime(orders$order_estimated_delivery_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_approved_at<-as.Date(orders$order_approved_at,format="%Y-%m-%d %H:%M:%S")
+orders$order_purchase_timestamp<-as.Date(orders$order_purchase_timestamp,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_carrier_date<-as.Date(orders$order_delivered_carrier_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_customer_date<-as.Date(orders$order_delivered_customer_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_estimated_delivery_date<-as.Date(orders$order_estimated_delivery_date,format="%Y-%m-%d %H:%M:%S")
 
 table(orders$order_status)
-orderitems$shipping_limit_date<-strptime(orderitems$shipping_limit_date,format="%Y-%m-%d %H:%M:%S")
+orderitems$shipping_limit_date<-as.Date(orderitems$shipping_limit_date,format="%Y-%m-%d %H:%M:%S")
 ```
 
 #3 把各個資料合併
@@ -160,7 +164,9 @@ seller_TOP100_2 <- merge(seller_TOP100,closed[,c(1,2,6,8,9,12)],by="seller_id",a
 
 marketingdata <- merge(closed[,c(1,2,6,8,9,12)],marketing[,c(1,4)],by = "mql_id")
  
-M_9 <-  merge(M_8,marketingdata,by = "seller_id")
+M_9 <-  merge(M_8,marketingdata,by = "seller_id",all.x = T)
+
+
 ```
 
 #分析
@@ -183,48 +189,122 @@ ggplot() +
   geom_point(data= M_9[M_9$lead_behaviour_profile=="wolf",],aes(x=custlng,y=custlat,color=lead_behaviour_profile),size=0.2)
 ```
 
-#7 找對評分的重要變數
+
+#7 畫出Olist的成長概況：每月的訂單數、新進的買賣家數
+
+```{r}
+str(M_9)
+class(M_9$time)
+unique(M_9$time_group)
+
+M_9[,9]=as.POSIXct(M_9[,9], format="%Y-%m-%d")
+M_9$time_group <- format(M_9$order_purchase_timestamp,"%Y%m") %>% as.numeric()
+M_9$time <- format(M_9$order_purchase_timestamp,"%Y%m") %>% paste0(.,"28") %>% as.Date("%Y%m%d")
+
+              
+time_group <- unique(M_9$time_group) %>% sort() 
+num_seller_1 = sapply(1:length(time_group), # start by 2, so i-1 = 1
+            function(i) setdiff(M_9$seller_id[M_9$time_group==time_group[i]],unique(M_9$seller_id[M_9$time_group<time_group[i]])) %>% length)
+num_seller =  c(0,num_seller_1[-24])
+
+num_customer_1 = sapply(1:length(time_group), # start by 2, so i-1 = 1
+            function(i) setdiff(M_9$customer_unique_id[M_9$time_group==time_group[i]],unique(M_9$customer_unique_id[M_9$time_group<time_group[i]])) %>% length)
+num_customer =  c(0,num_customer_1[-24])
+
+num_order <- M_9 %>% group_by(time) %>% summarise(
+  num_order = length(unique(order_id))
+  )
+
+plot <- cbind(time=(sort(unique(M_9$time))),num_seller,num_customer,num_order[,2])
+
+```
+
+#ggplotly_try 嘗試直接顯示4個軸度
+```{r}
+plotly = ggplot(plot, mapping =aes(x=as.factor(time), y=num_order, col=num_customer)) +
+  geom_point(mapping = aes(size=num_seller)) +
+  geom_text(mapping =aes(label=time), size=0.5) +
+  theme(axis.text.x = element_text(angle=90, hjust=1, vjust=.5)) +
+  ylab("Order") +
+  xlab("Time")
+plotly
+ggplotly(plotly)  
+```
+
+#畫出時間序列的折線圖
+```{r}
+data.ts<-zoo(plot,plot[,"time"])
+plot <- data.ts[1:24,-1]
+
+dygraph(plot,main = "Olist新進買賣家及訂單數走勢") %>%
+   dySeries("num_customer", label = "新進顧客數")%>%
+   dySeries("num_order", label = "訂單數") %>%
+   dySeries("num_seller", axis = 'y2', label = "新進賣家數") %>%
+   dyOptions( axisLineColor="orange", 
+    gridLineColor="indianred" , fillGraph = F,fillAlpha = 0.2,
+    drawGrid  = TRUE,drawPoints=TRUE, pointSize = 1 ) %>% 
+   dyAxis("x", label = " 日期 ",   drawGrid = F) %>% 
+   dyAxis("y", label = " ", drawGrid = T) %>% 
+   dyHighlight(highlightCircleSize = 3,              
+    highlightSeriesBackgroundAlpha = 0.2) %>% 
+   dyOptions(colors = RColorBrewer::brewer.pal(3, 'Dark2')) %>%
+   dyRangeSelector(height = 1)
+```
+
+#8 找對評分的重要變數
 ```{r}
 M_9 %>% colnames() #2:4,9:11,15,17,19:20,22,24,25,32,38
-score <- M_9[,c(5,10:12,16,17,19,20,22,24,25,32,38)] %>% group_by(order_id) %>% summarise(
+score <- M_9[,c(5,10:12,16,17,19,20,22,24:29,32,38,46)] %>% group_by(order_id) %>% summarise(
   ship13 = mean(order_delivered_customer_date-order_approved_at),
   ship12 = mean(order_delivered_carrier_date-order_approved_at),
   ship23 = mean(order_delivered_customer_date-order_delivered_carrier_date),
   ship_ratio = mean(freight_value/price),
+  price = sum(price),
+  AVEvolume = sum(product_length_cm*product_height_cm*product_width_cm)/max(order_item_id),
   description = sum(product_description_lenght)/max(order_item_id),
   photo_num = sum(product_photos_qty)/max(order_item_id),
   pay_installment = sum(payment_installments)/max(order_item_id),
   dist = sum(distbtwn)/max(order_item_id),
-  customer_state = head(customer_state,1),
-  seller_state = head(seller_state,1)
+  customer_state = customer_state[1],
+  seller_state = seller_state[1],
+  time_group = time_group[1]
 )  
+
+
 
 reviews2 <- reviews %>% group_by(order_id) %>% summarise(
   score = mean(review_score)
 )
 ```
-
-#8 回歸模型
+# 建置對評分的回歸模型
 ```{r}
 score_lm<-merge(score,reviews2,by="order_id")
-colnames(score_lm)
-model <- lm(score ~ . ,data = score_lm[,c(2:12)])
-summary(model)
+score_lm[,2:4] <- sapply(score_lm[,2:4], as.numeric)
+score_lm <- score_lm[complete.cases(score_lm),]
+
 ```
 
+#回歸結果
 ```{r}
-score2 = score
-
-score2$customer_state <-  factor(score2$customer_state,ordered=TRUE)
-state_transfer <- levels(score2$customer_state) %>% as.data.frame()
-state_transfer$state_num <- sample(1:26) 
-names(state_transfer) <- c("customer_state","state_num")
-  
-score_lm2<-merge(score_lm,state_transfer)
-colnames(score_lm2)
-model <- lm(score ~ . ,data = score_lm2[,c(3:10,12,13)])
+model <- lm(score ~ . ,data = score_lm[,c(2:15)])
 summary(model)
 ```
+
+#相關係數視覺化
+```{r}
+# Libraries
+library(GGally)
+
+# Check correlation between variables
+cor(score_lm[,c(2:11,14,15)]) 
+ 
+# Check correlations (as scatterplots), distribution and print corrleation coefficient 
+#ggpairs(score_lm[,c(2:11,14,15)]) 
+ 
+# Nice visualization of correlations
+ggcorr(score_lm[,c(2:11,14,15)], method = c("everything", "pearson")) 
+```
+
 
 ################################################
 ################以下王誠歆部分##################
@@ -300,7 +380,7 @@ table(ts.byH)
 
 a <- merge(olist_orders_dataset.csv, olist_order_items_dataset.csv, by.x = "order_id")
 b <- merge(a, olist_products_dataset.csv, by.x = "product_id")
-c <- merge(b, product_category_name_translation.csv, by.x= "product_category_name")
+c <- merge(b, product_category_name_translation.csv, by.x= "product_category_name", by.y="ï..product_category_name")
 
 D <- select(c,product_category_name_english, order_purchase_timestamp)
 
@@ -321,6 +401,20 @@ DD.byh <- format(DD,format="%H")
 D$byh <- DD.byh
 ##table(D$product_category_name_english, D$byh)
 ggplot(D, aes(product_category_name_english, fill=byh, width=1))+ geom_bar()+coord_flip()##按照時間點的銷售量
+
+#按照小時區分heatmap版本
+#Rearranging data from D data frame
+deaf = select(D, product_category_name_english,byh)
+shook = group_by(deaf, byh, product_category_name_english) %>% summarise(n=n())
+jump = spread(shook, byh, n)
+jump[is.na(jump)] <- 0 
+
+#Converting product category column into rowname
+jump = column_to_rownames(jump, var = "product_category_name_english")
+
+jump = as.matrix(jump)
+#Using plot_ly () to draw the interactive heatmap
+plot_ly(x=colnames(jump), y=rownames(jump), z = jump, type = "heatmap")
 ```
 
 
@@ -353,14 +447,12 @@ E<-merge(x = A , y = sellers, by = "seller_id")
 ```
 
 ```{r}
-library(dplyr)
-library(leaflet)
-library(maps)
 #score: the average score of each city
 score <- E %>%
 group_by(seller_city) %>% 
   summarise(
-  score = mean(review_score)
+  score = mean(review_score),
+  pricesum = sum(price)+sum(freight_value)
   ) 
 ```
 
@@ -378,38 +470,38 @@ summarise(
   seller_city = geolocation_city[1],
   state = geolocation_state[1]
   )
-```
-
-
-```{r}
-#merge score of cities and geo of cities so that we can use leaflet
-city_score <- merge(score,geolocation,by="seller_city")
-city_score_fig <- leaflet() %>% 
-  addTiles()  %>%
-  addCircleMarkers(
-    lng     = city_score$lng,
-    lat     = city_score$lat,
-    label   = city_score$seller_city,
-    color   = city_score$score,
-    labelOptions = labelOptions(noHide = F) ,
-    options = popupOptions(closeButton = FALSE)
-  )
-```
-
-
 
 #draw review of each state and use addPolygon to fig
-```{r}
-state_score <- city_score %>% group_by(state) %>%
-  summarise(
-  score = mean(score)
-  )
+city_score <- merge(score,geolocation,by="seller_city")
+state_score <- city_score %>%
+group_by(state) %>%
+summarise(
+  score = mean(score),
+  pricesum = sum(pricesum)
+)
 
-```
-
-```{r}
-#import Brazil json data 
+#import Brazill json data 
 states <- geojsonio::geojson_read("C:\\Users\\User\\Desktop\\Group3\\midterm\\Brazil.json", what = "sp")
+
+#color setting
+bins_score <- c(0,1.0,2.0,3.0,4.0,5.0)
+bins_money <- c(0,500,5000,10000,50000,100000,1000000,Inf)
+pal_score <- colorBin("Blues", domain = state_score$score, bins = bins_score)
+pal_money <- colorBin("Reds"  ,domain = state_score$pricesum, bins = bins_money)
+
+#add score Info of State
+labels <- sprintf(
+  "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
+  state_score$state, 
+  state_score$score,
+  state_score$pricesum
+) %>% lapply(htmltools::HTML)
+citylabels <- sprintf(
+  "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
+  city_score$seller_city, 
+  city_score$score,
+  city_score$pricesum
+)%>% lapply(htmltools::HTML)
 
 #form a map of Brazil 
 map_Brazil <- leaflet(states) %>%
@@ -418,23 +510,29 @@ map_Brazil <- leaflet(states) %>%
     id = "mapbox.light",
     accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
 map_Brazil %>% addPolygons()
-```
 
-```{r}
-#color setting
-bins <- c(0,1.0,2.0,3.0,4.0,5.0)
-pal <- colorBin("YlOrRd", domain = state_score$score, bins = bins)
-#add Info
-labels <- sprintf(
-  "<strong>%s</strong><br/>  score: %g ",
-  state_score$state, state_score$score
-) %>% lapply(htmltools::HTML)
+#draw city inform
+map_Brazil <- map_Brazil %>%
+  addCircleMarkers(
+    lng     = city_score$lng,
+    lat     = city_score$lat,
+    label   = citylabels,
+    weight  = .1, 
+    color   = "Yellow",
+    labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 4px"),
+    textsize = "15px",
+    direction = "auto"),
+    options = popupOptions(closeButton = TRUE),
+    group = "city"
+  )      
 ```
-
+#draw state labels
 ```{r}
-#Just draw it!
-map_Brazil <- map_Brazil %>% addPolygons(
-  fillColor = ~pal(state_score$score),
+map_Brazil <- map_Brazil %>% 
+#add state score information 
+addPolygons(
+  fillColor = ~pal_score(state_score$score),
   weight = 2,
   opacity = 1,
   color = "white",
@@ -450,11 +548,39 @@ map_Brazil <- map_Brazil %>% addPolygons(
   labelOptions = labelOptions(
     style = list("font-weight" = "normal", padding = "3px 8px"),
     textsize = "15px",
-    direction = "auto"))
-##add legend 
-map_Brazil <- map_Brazil %>%
-addLegend(pal = pal, values = ~state_score$score, opacity = 0.7, title = "average score",
-  position = "topright")
+    direction = "auto"),
+  group = "state_score"
+  )  %>%
+#add state price information 
+  addPolygons(
+  fillColor = ~pal_money(state_score$pricesum),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  dashArray = "3",
+  fillOpacity = 0.7,
+  highlight = highlightOptions(
+    weight = 5,
+    color = "#666",
+    dashArray = "",
+    fillOpacity = 0.7,
+    bringToFront = TRUE),
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"),
+  group = "state_price"
+  ) %>% 
+# add layer Control 
+  addLayersControl(
+    overlayGroups  = c("state_score","state_price","city")
+  ) %>% 
+#add legens 
+addLegend(pal = pal_money, values = ~state_score$pricesum ,opacity =0.7,title = "price legend",
+  position = "bottomleft" ) %>%
+addLegend(pal = pal_score, values = ~state_score$score, opacity = 0.7, title = "score legend",
+  position = "bottomleft") 
 ```
 
 #結果
