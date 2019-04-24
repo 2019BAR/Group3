@@ -17,7 +17,7 @@ if(!require(pacman)) install.packages("pacman")
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
 ###工具
-packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio")
+packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio","plotly")
 
 existing = as.character(installed.packages()[,1])
 for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
@@ -474,12 +474,36 @@ m3<-merge(x = m1, y = sellers, by = "seller_id")
 ```
 
 ```{r}
-#不同商品種類的平均評價分數 : air conditioning和handcrafted的平均評價最好
-Q <- group_by(m2,business_segment)%>%summarize(score=mean(review_score))
-arrange(Q,score)
+#不同商品種類的平均評價分數排名 : air conditioning和handcrafted的平均評價最好
+Product <- group_by(m2,business_segment)%>%summarize(score=mean(review_score),quantity=n(),price=mean(price))
+arrange(Product,score)
 sort(table(m2$business_segment))
 
+#互動式 不同類別的平均評價散點圖
+g=qplot(x=Product$score,                               
+      y=Product$quantity,                              
+      geom="point",  
+      main = "不同商品類別的評價、銷量、價格",  
+      xlab="平均分數",                          
+      ylab="賣出數量",
+      color= Product$business_segment,
+      size = Product$price
+      )
+ggplotly(g)
 ```
+
+```{r}
+#互動式:商品類別圓餅圖
+Product2 <- group_by(m2,business_segment)%>%summarize(score2=mean(review_score),percent=n()/nrow(m2)*100)
+
+ggg <- data.frame(segment=Product2$business_segment,
+                 perc=c(Product2$percent))
+plot_ly(ggg, labels = Product2$business_segment,values = Product2$percent, type = 'pie') %>%
+  layout(title = '各種類商品銷售百分比',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+```
+
 
 ```{r}
 #運費佔價格比例與評分的關聯，圖形上看起來，運費佔比越高，消費者對商品評價越低。但運費佔比與評價的相關係數很小
