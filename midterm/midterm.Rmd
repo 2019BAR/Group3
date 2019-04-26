@@ -17,11 +17,11 @@ if(!require(pacman)) install.packages("pacman")
 
 ```{r results='hide', message=FALSE, warning=FALSE, echo=F}
 ###工具
-<<<<<<< HEAD
+
 packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio","plotly")
-=======
+
 packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio","plotly", "googleVis","latticeExtra","dygraphs","zoo","GGally")
->>>>>>> fec85f679092c3d2d24ac993a9952e2fdab94524
+
 
 existing = as.character(installed.packages()[,1])
 for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
@@ -380,7 +380,7 @@ table(ts.byH)
 
 a <- merge(olist_orders_dataset.csv, olist_order_items_dataset.csv, by.x = "order_id")
 b <- merge(a, olist_products_dataset.csv, by.x = "product_id")
-c <- merge(b, product_category_name_translation.csv, by.x= "product_category_name", by.y="ï..product_category_name")
+c <- merge(b, product_category_name_translation.csv, by.x= "product_category_name", by.y="嚜穆roduct_category_name")
 
 D <- select(c,product_category_name_english, order_purchase_timestamp)
 
@@ -611,7 +611,7 @@ Product <- group_by(m2,business_segment)%>%summarize(score=mean(review_score),qu
 arrange(Product,score)
 sort(table(m2$business_segment))
 
-#互動式 不同類別的平均評價散點圖
+#不同類別的平均評價 互動式散點圖
 g=qplot(x=Product$score,                               
       y=Product$quantity,                              
       geom="point",  
@@ -625,13 +625,10 @@ ggplotly(g)
 ```
 
 ```{r}
-#互動式:商品類別圓餅圖
-Product2 <- group_by(m2,business_segment)%>%summarize(score2=mean(review_score),percent=n()/nrow(m2)*100)
-
-ggg <- data.frame(segment=Product2$business_segment,
-                 perc=c(Product2$percent))
-plot_ly(ggg, labels = Product2$business_segment,values = Product2$percent, type = 'pie') %>%
-  layout(title = '各種類商品銷售百分比',
+#互動式圓餅圖 不同種類商品的平均評分&其銷量佔比(商品種類後面的數字是其平均分數)
+Product2 <- group_by(m2,business_segment)%>%summarize(score2=round(mean(review_score), digits = 2),percent=n()/nrow(m2)*100)
+plot_ly(Product2, labels = paste(Product2$business_segment,Product2$score2),values = Product2$percent, type = 'pie' ) %>%
+  layout(title = '各種類商品銷售百分比與其平均評分',
          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 ```
