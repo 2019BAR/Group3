@@ -496,8 +496,9 @@ labels <- sprintf(
   state_score$score,
   state_score$pricesum
 ) %>% lapply(htmltools::HTML)
+
 citylabels <- sprintf(
-  "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
+  "<strong>city: %s</strong><br/> score: %g <br/> total price: %g ",
   city_score$seller_city, 
   city_score$score,
   city_score$pricesum
@@ -505,19 +506,23 @@ citylabels <- sprintf(
 
 #form a map of Brazil 
 map_Brazil <- leaflet(states) %>%
-  setView(lat=-22.074022, lng=-48.74026, zoom = 4) %>%  
-  addProviderTiles("MapBox", options = providerTileOptions(
+  setView(lat=-22.074022, lng=-48.74026, zoom = 4)  %>%
+  addProviderTiles("MapBox",group = "map", options = providerTileOptions(
     id = "mapbox.light",
-    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
-map_Brazil %>% addPolygons()
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) 
+map_Brazil %>% addPolygons(group = "map") 
 
 #draw city inform
-map_Brazil <- map_Brazil %>%
+map_Brazil <- map_Brazil %>%  
+  addProviderTiles("MapBox",group = "city", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>% 
+  addPolygons(group = "city") %>%
   addCircleMarkers(
     lng     = city_score$lng,
     lat     = city_score$lat,
     label   = citylabels,
-    weight  = .1, 
+    weight  = 5, 
     color   = "Yellow",
     labelOptions = labelOptions(
     style = list("font-weight" = "normal", padding = "3px 4px"),
@@ -572,15 +577,16 @@ addPolygons(
     direction = "auto"),
   group = "state_price"
   ) %>% 
+#add legends 
+  addLegend(pal = pal_money, values = ~state_score$pricesum ,opacity =0.7,title = "price legend",
+    position = "bottomleft",group = "state_price" ) %>%
+  addLegend(pal = pal_score, values = ~state_score$score, opacity = 0.7, title = "score legend",
+    position = "bottomleft",group = "state_score") %>% 
 # add layer Control 
   addLayersControl(
-    overlayGroups  = c("state_score","state_price","city")
-  ) %>% 
-#add legens 
-addLegend(pal = pal_money, values = ~state_score$pricesum ,opacity =0.7,title = "price legend",
-  position = "bottomleft" ) %>%
-addLegend(pal = pal_score, values = ~state_score$score, opacity = 0.7, title = "score legend",
-  position = "bottomleft") 
+    baseGroups  = c("map"),
+    overlayGroups  = c("state_score","state_price","city") 
+  ) 
 ```
 
 #結果
