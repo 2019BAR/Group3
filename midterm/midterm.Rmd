@@ -481,7 +481,7 @@ summarise(
 )
 
 #import Brazill json data 
-states <- geojsonio::geojson_read("C:\\Users\\dell\\Documents\\GitHub\\Group3\\midterm\\Brazil.json", what = "sp")
+states <- geojsonio::geojson_read("C:\\Users\\User\\Desktop\\Group3\\midterm\\Brazil.json", what = "sp")
 
 #color setting
 bins_score <- c(0,1.0,2.0,3.0,4.0,5.0)
@@ -583,7 +583,7 @@ addPolygons(
   addLayersControl(
     overlayGroups  = c("city","state_score","state_price") 
   ) %>%
-  hideGroup("state_price"))  %>%
+  hideGroup("state_price")  %>%
 # add mini map
   addProviderTiles(providers$Esri.WorldStreetMap) %>%
   addMiniMap(
