@@ -1,0 +1,713 @@
+---
+title: "R 期中競賽 第三組"
+output:
+  html_document:
+    df_print: paged
+---
+
+################################################
+###載入套件及資料
+################################################
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# 這些程式碼設定網頁的格式，並安裝、載入一些基本的套件，請大家不要去改動<br>
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=5, width=80)
+if(!require(pacman)) install.packages("pacman")
+```
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+###工具
+
+
+packages = c("dplyr","stringr","readr","ggplot2","scales","mapdata","maps","Imap","factoextra","lubridate","leaflet","geojsonio","plotly", "googleVis","latticeExtra","dygraphs","zoo","GGally","tidyverse","textshape")
+
+
+existing = as.character(installed.packages()[,1])
+for (pkg in packages[!(packages %in% existing)])install.packages(pkg)
+
+sapply(packages,library, character.only = T)
+```
+
+```{r}
+#Loading multiple .csv files as separate data frames
+getwd()
+folder <- "data/"
+file_list <- list.files(path = folder, pattern = "*.csv")
+```
+
+
+```{r}
+#Read in each .csv file 
+for (i in 1:length(file_list)){
+  assign(file_list[i],
+         read.csv(paste(folder,file_list[i],sep=''),stringsAsFactors = F)
+  )}
+```
+
+
+```{r}
+#Rename data
+geo <- olist_geolocation_dataset.csv
+orders <- olist_orders_dataset.csv
+cust <- olist_customers_dataset.csv
+sellers <- olist_sellers_dataset.csv
+products <- olist_products_dataset.csv
+orderitems <- olist_order_items_dataset.csv
+payments <- olist_order_payments_dataset.csv
+nametrans <- product_category_name_translation.csv
+reviews <- olist_order_reviews_dataset.csv
+closed <- olist_closed_deals_dataset.csv
+marketing <- olist_marketing_qualified_leads_dataset.csv
+```
+
+
+```{r}
+# 地理資料整理
+geo$geolocation_lat<-round(geo$geolocation_lat,3)
+geo$geolocation_lng<-round(geo$geolocation_lng,3)
+
+selllocation<-geo %>% group_by(geolocation_city) %>% summarise(selllat = max(geolocation_lat),selllng=max(geolocation_lng))
+custlocation<-geo %>% group_by(geolocation_city) %>% summarise(custlat = max(geolocation_lat),custlng=max(geolocation_lng))
+```
+
+
+```{r}
+# 時間資料處理
+orders$order_approved_at<-as.Date(orders$order_approved_at,format="%Y-%m-%d %H:%M:%S")
+orders$order_purchase_timestamp<-as.Date(orders$order_purchase_timestamp,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_carrier_date<-as.Date(orders$order_delivered_carrier_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_delivered_customer_date<-as.Date(orders$order_delivered_customer_date,format="%Y-%m-%d %H:%M:%S")
+orders$order_estimated_delivery_date<-as.Date(orders$order_estimated_delivery_date,format="%Y-%m-%d %H:%M:%S")
+
+table(orders$order_status)
+orderitems$shipping_limit_date<-as.Date(orderitems$shipping_limit_date,format="%Y-%m-%d %H:%M:%S")
+```
+
+
+```{r}
+# 把各個資料合併
+M_1 <- merge(orderitems,sellers,by.x="seller_id",by.y="seller_id")
+M_2 <- merge(orders,cust,by.x="customer_id",by.y="customer_id")
+M_3 <- merge(M_2,M_1,by="order_id")
+M_4 <- merge(M_3,products,by="product_id")
+M_5 <- merge(M_4,payments,by="order_id")
+M_6 <- merge(M_5,selllocation,by.x="seller_city",by.y="geolocation_city")
+M_7 <- merge(M_6,custlocation,by.x="customer_city",by.y="geolocation_city")
+
+colnames(nametrans) <- c("product_category_name","product_category_name_english")
+
+```
+
+
+```{r}
+#計算買賣家之間的距離
+dist_list <- list()
+
+for (i in 1:nrow(M_7)) {
+  
+  dist_list[[i]] <- gdist(lon.1 = M_7$selllng[i], 
+                          lat.1 = M_7$selllat[i], 
+                          lon.2 = M_7$custlng[i], 
+                          lat.2 = M_7$custlat[i], 
+                          units="miles")
+  
+}
+M_7$distbtwn<-as.integer(dist_list)
+M_8<-merge(M_7,nametrans,by="product_category_name")
+```
+
+
+```{r}
+# 置入巴西地理資料
+Brazil<-map_data("world") %>% filter(region=="Brazil")
+
+#排除界外外的資料
+M_8 = M_8[M_8$selllat <= 5.27438888,]
+M_8 = M_8[M_8$custlat <= 5.27438888,]
+
+```
+
+```{r}
+#M_15_1 <- review of orderitems、M_15_2 <- review of sellers with order informatio
+M_15_1<-merge(x = reviews , y = orderitems, by = "order_id")
+M_15_2<-merge(x = M_15_1 , y = sellers, by = "seller_id")
+M_15_3<-merge(x = M_15_1, y = closed, by = "seller_id")
+```
+
+################################################
+### Part1:基本概況
+################################################
+
+##### 1-1.訂單數量
+
+##### 1-2.賣家與顧客的地理分布
+
+```{r}
+#畫出賣家所在地
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_8,aes(x=selllng,y=selllat,color=seller_state),size=0.2)
+```
+
+
+```{r}
+#畫出買家所在地
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_8,aes(x=custlng,y=custlat,color=customer_state),size=0.2)
+```
+
+
+```{r}
+#各產品類別銷售情況及所在地
+ggplot() +
+  geom_bar(data= M_8,aes(product_category_name_english,fill=seller_state),width=1)+ coord_flip()
+```
+
+
+```{r}
+#賣家所在地數量
+ggplot() +
+  geom_bar(data= M_8,aes(seller_state,fill=seller_state),width=1)
+```
+
+
+#####1-3.危機:一次性顧客過多
+```{r}
+#抓出一次性購買消費者特性
+Q <- group_by(olist_customers_dataset.csv, customer_unique_id) %>% summarise(nid=n())
+Q <- filter(Q, nid==1) 
+M_13 <- merge(Q,cust, by="customer_unique_id")
+M_14_1 <- merge(M_13, olist_orders_dataset.csv, by="customer_id", all=F)
+M_14_2 <- merge(M_14_1,olist_order_items_dataset.csv, by="order_id", all=F)
+M_14_3 <- merge(M_14_2, olist_products_dataset.csv, by="product_id", all=F)
+colnames(product_category_name_translation.csv) <- c("product_category_name","product_category_name_english")
+M_14_4 <- merge(M_14_3,product_category_name_translation.csv, by="product_category_name", all = F)
+table(M_14_4$product_category_name_english) %>% sort() ##消費量最多為bed_beath
+onece <- group_by(M_14_4, product_category_name_english) %>% summarise(mean=mean(price), sum=sum(price))##平均消費額最多為computers與總消費最多為health_beauty
+```
+
+#####1-4.產品類別
+```{r}
+#尋找出銷售最高的產品
+#olist_products_dataset.csv : 32,951 consumers 
+table(products$product_category_name) %>% sort(decreasing = TRUE) ##消費最多是 cama_mesa_banho 3029
+``` 
+
+```{r}
+#互動式圓餅圖 : 不同種類商品的平均評分&其銷量佔比(商品種類後面的數字是其平均分數)
+Product2 <- group_by(M_15_3,business_segment)%>%summarize(score2=round(mean(review_score),2),percent=n()/nrow(M_15_3)*100)
+
+plot_ly(Product2, labels = paste(Product2$business_segment,Product2$score2),values = Product2$percent, type = 'pie') %>%
+  layout(title = '各種類商品銷售百分比',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+```
+
+#####1-5.不同時段下的銷售量
+
+```{r}
+#整理消費者購買月份
+ts = as.POSIXct(as.character(olist_orders_dataset.csv$order_purchase_timestamp) , format="%Y-%m-%d %T")
+
+ts.bym <- cut(ts, breaks = "month")
+dfts <- data.frame(ts,ts.bym)
+table(dfts$ts.bym)
+ggplot(dfts, aes(ts.bym),las=1)+ geom_bar() ##最多銷售月份為2018-1-1
+
+#每日尖峰時段
+ts.byH <- format(ts,format="%H") %>% data.frame()
+ggplot(ts.byH ,aes(.))+ geom_bar()
+table(ts.byH)
+```
+
+```{r}
+##商品種類-月份
+
+M_10 <- merge(olist_orders_dataset.csv, olist_order_items_dataset.csv, by.x = "order_id")
+M_11 <- merge(M_10, olist_products_dataset.csv, by.x = "product_id")
+M_12 <- merge(M_11, product_category_name_translation.csv, by= "product_category_name")
+
+D <- select(M_12,product_category_name_english, order_purchase_timestamp)
+
+DD = as.POSIXct(as.character(D$order_purchase_timestamp) , format="%Y-%m-%d %T")
+DD.bym <- format(DD,format="%m")
+D$bym <- DD.bym
+E <- filter(D, product_category_name_english=="bed_bath_table"|product_category_name_english=="health_beauty"|product_category_name_english=="sports_leisure"|product_category_name_english=="furniture_decor"|product_category_name_english=="computers_accessories"|product_category_name_english=="housewares" )
+
+summary(D$product_category_name_english) %>% sort()
+
+##table(D$product_category_name_english, D$bym)
+ggplot(E ,aes(product_category_name_english, fill=bym))+ geom_bar() ##抓出銷售量最高的六種商品做每個月分的比例圖
+
+ggplot(D, aes(product_category_name_english, fill=bym, width=1))+ geom_bar()+coord_flip()  ##每種商品每個月分的銷售狀況
+
+##按照小時區分
+DD.byh <- format(DD,format="%H")
+D$byh <- DD.byh
+##table(D$product_category_name_english, D$byh)
+ggplot(D, aes(product_category_name_english, fill=byh, width=1))+ geom_bar()+coord_flip()##按照時間點的銷售量
+
+#按照小時區分heatmap版本
+#Rearranging data from D data frame
+deaf = select(D, product_category_name_english,byh)
+shook = group_by(deaf, byh, product_category_name_english) %>% summarise(n=n())
+jump = spread(shook, byh, n)
+jump[is.na(jump)] <- 0 
+
+#Converting product category column into rowname
+library(tidyverse)
+jump = column_to_rownames(jump, var = "product_category_name_english")
+
+jump = as.matrix(jump)
+#Using plot_ly () to draw the interactive heatmap
+plot_ly(x=colnames(jump), y=rownames(jump), z = jump, type = "heatmap")
+```
+################################################
+### Part2:每年變化趨勢分析
+################################################
+
+#####2-1.每月的訂單數，新進的買、賣家數
+
+# 併入Olist其他行銷資料
+```{r}
+seller_TOP100 <-
+  M_8 %>% group_by(seller_id,product_category_name_english) %>% summarise(
+  mount = sum(price),
+  num = n()) %>% arrange(desc(num)) %>% head(100)
+
+seller_TOP100_2 <- merge(seller_TOP100,closed[,c(1,2,6,8,9,12)],by="seller_id",all.x = T)
+
+marketingdata <- merge(closed[,c(1,2,6,8,9,12)],marketing[,c(1,4)],by = "mql_id")
+ 
+M_9 <-  merge(M_8,marketingdata,by = "seller_id",all.x = T)
+
+
+```
+
+
+```{r}
+#7 畫出Olist的成長概況：每月的訂單數、新進的買賣家數
+str(M_9)
+class(M_9$time)
+unique(M_9$time_group)
+
+M_9[,9]=as.POSIXct(M_9[,9], format="%Y-%m-%d")
+M_9$time_group <- format(M_9$order_purchase_timestamp,"%Y%m") %>% as.numeric()
+M_9$time <- format(M_9$order_purchase_timestamp,"%Y%m") %>% paste0(.,"28") %>% as.Date("%Y%m%d")
+
+              
+time_group <- unique(M_9$time_group) %>% sort() 
+num_seller_1 = sapply(1:length(time_group), # start by 2, so i-1 = 1
+            function(i) setdiff(M_9$seller_id[M_9$time_group==time_group[i]],unique(M_9$seller_id[M_9$time_group<time_group[i]])) %>% length)
+num_seller =  c(0,num_seller_1[-24])
+
+num_customer_1 = sapply(1:length(time_group), # start by 2, so i-1 = 1
+            function(i) setdiff(M_9$customer_unique_id[M_9$time_group==time_group[i]],unique(M_9$customer_unique_id[M_9$time_group<time_group[i]])) %>% length)
+num_customer =  c(0,num_customer_1[-24])
+
+num_order <- M_9 %>% group_by(time) %>% summarise(
+  num_order = length(unique(order_id))
+  )
+
+plot <- cbind(time=(sort(unique(M_9$time))),num_seller,num_customer,num_order[,2])
+
+```
+
+
+```{r}
+#ggplotly_try 嘗試直接顯示4個軸度
+plotly = ggplot(plot, mapping =aes(x=as.factor(time), y=num_order, col=num_customer)) +
+  geom_point(mapping = aes(size=num_seller)) +
+  geom_text(mapping =aes(label=time), size=0.5) +
+  theme(axis.text.x = element_text(angle=90, hjust=1, vjust=.5)) +
+  ylab("Order") +
+  xlab("Time")
+plotly
+ggplotly(plotly)  
+```
+
+#####2-2.時間序列的折線圖:每月的訂單數，新進的買、賣家數
+
+```{r}
+#畫出時間序列的折線圖
+data.ts<-zoo(plot,plot[,"time"])
+plot <- data.ts[1:24,-1]
+
+dygraph(plot,main = "Olist新進買賣家及訂單數走勢") %>%
+   dySeries("num_customer", label = "新進顧客數")%>%
+   dySeries("num_order", label = "訂單數") %>%
+   dySeries("num_seller", axis = 'y2', label = "新進賣家數") %>%
+   dyOptions( axisLineColor="orange", 
+    gridLineColor="indianred" , fillGraph = F,fillAlpha = 0.2,
+    drawGrid  = TRUE,drawPoints=TRUE, pointSize = 1 ) %>% 
+   dyAxis("x", label = " 日期 ",   drawGrid = F) %>% 
+   dyAxis("y", label = " ", drawGrid = T) %>% 
+   dyHighlight(highlightCircleSize = 3,              
+    highlightSeriesBackgroundAlpha = 0.2) %>% 
+   dyOptions(colors = RColorBrewer::brewer.pal(3, 'Dark2')) %>%
+   dyRangeSelector(height = 1)
+```
+
+#####2-3.產品類別評分及銷售情形 
+
+```{r}
+#不同商品種類的平均評價分數排名 : air conditioning和handcrafted的平均評價最好
+Product <- group_by(M_15_3,business_segment)%>%summarize(score=mean(review_score),quantity=n(),price=mean(price))
+arrange(Product,score)
+sort(table(M_15_3$business_segment))
+
+#不同類別的平均評價 互動式散點圖
+g=qplot(x=Product$score,                               
+      y=Product$quantity,                              
+      geom="point",  
+      main = "不同商品類別的評價、銷量、價格",  
+      xlab="平均分數",                          
+      ylab="賣出數量",
+      color= Product$business_segment,
+      size = Product$price
+      )
+ggplotly(g)
+```
+
+
+#####2-4.泡泡圖:產品類別評分及銷售情形 -> 發現評分表現下滑
+
+################################################
+### Part3:地區下的銷售/評分情況
+################################################
+
+#####3-1.州(state)銷售額
+#####3-1.州(state)評分
+#####3-1.城市(city)銷售額
+#####3-1.城市(city)評分
+################以下孫嘉力部分
+```{r}
+#score: the average score of each city
+score <- M_15_2 %>%
+group_by(seller_city) %>% 
+  summarise(
+  score = mean(review_score),
+  pricesum = sum(price)+sum(freight_value)
+  ) 
+```
+
+```{r}
+#geolocation: private dataframe, with state,lon and lat of each city
+geolocation <- olist_geolocation_dataset.csv
+geolocation['seller_city'] = geo['geolocation_city']
+geolocation['state'] = geo["geolocation_state"]
+geolocation['geolocation_zip_code_prefix'] = NULL
+geolocation <- geo %>% 
+group_by(geolocation_city) %>% 
+summarise(
+  lat = mean(geolocation_lat),
+  lng = mean(geolocation_lng),
+  seller_city = geolocation_city[1],
+  state = geolocation_state[1]
+  )
+
+#draw review of each state and use addPolygon to fig
+city_score <- merge(score,geolocation,by="seller_city")
+state_score <- city_score %>%
+group_by(state) %>%
+summarise(
+  score = mean(score),
+  pricesum = sum(pricesum)
+)
+
+#import Brazill json data 
+states <- geojsonio::geojson_read("C:\\Users\\User\\Desktop\\Group3\\midterm\\Brazil.json", what = "sp")
+
+#color setting
+bins_score <- c(0,1.0,2.0,3.0,4.0,5.0)
+bins_money <- c(0,500,5000,10000,50000,100000,1000000,Inf)
+pal_score <- colorBin("Blues", domain = state_score$score, bins = bins_score)
+pal_money <- colorBin("Reds"  ,domain = state_score$pricesum, bins = bins_money)
+
+#add score Info of State
+labels <- sprintf(
+  "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
+  state_score$state, 
+  state_score$score,
+  state_score$pricesum
+) %>% lapply(htmltools::HTML)
+citylabels <- sprintf(
+  "<strong>%s</strong><br/> score: %g <br/> total price: %g ",
+  city_score$seller_city, 
+  city_score$score,
+  city_score$pricesum
+)%>% lapply(htmltools::HTML)
+
+#form a map of Brazil 
+map_Brazil <- leaflet(states) %>%
+  setView(lat=-22.074022, lng=-48.74026, zoom = 4) %>%  
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN')))
+map_Brazil %>% addPolygons()
+
+#draw city inform
+map_Brazil <- map_Brazil %>%
+  addCircleMarkers(
+    lng     = city_score$lng,
+    lat     = city_score$lat,
+    label   = citylabels,
+    weight  = .1, 
+    color   = "Yellow",
+    labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 4px"),
+    textsize = "15px",
+    direction = "auto"),
+    options = popupOptions(closeButton = TRUE),
+    group = "city"
+  )      
+```
+#draw state labels
+```{r}
+map_Brazil <- map_Brazil %>% 
+#add state score information 
+addPolygons(
+  fillColor = ~pal_score(state_score$score),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  dashArray = "3",
+  fillOpacity = 0.7,
+  highlight = highlightOptions(
+    weight = 5,
+    color = "#666",
+    dashArray = "",
+    fillOpacity = 0.7,
+    bringToFront = TRUE),
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"),
+  group = "state_score"
+  )  %>%
+#add state price information 
+  addPolygons(
+  fillColor = ~pal_money(state_score$pricesum),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  dashArray = "3",
+  fillOpacity = 0.7,
+  highlight = highlightOptions(
+    weight = 5,
+    color = "#666",
+    dashArray = "",
+    fillOpacity = 0.7,
+    bringToFront = TRUE),
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"),
+  group = "state_price"
+  ) %>% 
+# add layer Control 
+  addLayersControl(
+    overlayGroups  = c("state_score","state_price","city")
+  ) %>% 
+#add legens 
+addLegend(pal = pal_money, values = ~state_score$pricesum ,opacity =0.7,title = "price legend",
+  position = "bottomleft" ) %>%
+addLegend(pal = pal_score, values = ~state_score$score, opacity = 0.7, title = "score legend",
+  position = "bottomleft") 
+```
+
+#結果
+```{r}
+map_Brazil
+```
+
+################################################
+### Part4:評分迴歸模型
+################################################
+
+#####4-1.解釋新變數
+```{r}
+#8 找對評分的重要變數
+#####王
+M_9 %>% colnames() #2:4,9:11,15,17,19:20,22,24,25,32,38
+score <- M_9[,c(5,10:12,16,17,19,20,22,24:29,32,38,46)] %>% group_by(order_id) %>% summarise(
+  ship13 = mean(order_delivered_customer_date-order_approved_at),
+  ship12 = mean(order_delivered_carrier_date-order_approved_at),
+  ship23 = mean(order_delivered_customer_date-order_delivered_carrier_date),
+  ship_ratio = mean(freight_value/price),
+  price = sum(price),
+  AVEvolume = sum(product_length_cm*product_height_cm*product_width_cm)/max(order_item_id),
+  description = sum(product_description_lenght)/max(order_item_id),
+  photo_num = sum(product_photos_qty)/max(order_item_id),
+  pay_installment = sum(payment_installments)/max(order_item_id),
+  dist = sum(distbtwn)/max(order_item_id),
+  customer_state = customer_state[1],
+  seller_state = seller_state[1],
+  time_group = time_group[1]
+)  
+
+
+
+reviews2 <- reviews %>% group_by(order_id) %>% summarise(
+  score = mean(review_score)
+)
+```
+
+```{r}
+# 建置對評分的回歸模型
+score_lm<-merge(score,reviews2,by="order_id")
+score_lm[,2:4] <- sapply(score_lm[,2:4], as.numeric)
+score_lm <- score_lm[complete.cases(score_lm),]
+
+```
+
+
+```{r}
+#回歸結果
+model <- lm(score ~ . ,data = score_lm[,c(2:15)])
+summary(model)
+```
+
+#####4-2.相關係數
+```{r}
+#相關係數視覺化
+# Libraries
+library(GGally)
+
+# Check correlation between variables
+cor(score_lm[,c(2:11,14,15)]) 
+ 
+# Check correlations (as scatterplots), distribution and print corrleation coefficient 
+#ggpairs(score_lm[,c(2:11,14,15)]) 
+ 
+# Nice visualization of correlations
+ggcorr(score_lm[,c(2:11,14,15)], method = c("everything", "pearson")) 
+```
+
+
+################################################
+### 其他
+################################################
+# 找出前100大賣家
+```{r}
+seller_TOP100 <-
+  M_8 %>% group_by(seller_id,product_category_name_english) %>% summarise(
+  mount = sum(price),
+  num = n()) %>% arrange(desc(num)) %>% head(100)
+
+seller_TOP100_2 <- merge(seller_TOP100,closed[,c(1,2,6,8,9,12)],by="seller_id",all.x = T)
+
+marketingdata <- merge(closed[,c(1,2,6,8,9,12)],marketing[,c(1,4)],by = "mql_id")
+ 
+M_9 <-  merge(M_8,marketingdata,by = "seller_id",all.x = T)
+
+
+```
+#賣家的性格分類
+```{r}
+#分析
+A_1 <- M_9 %>% group_by(lead_behaviour_profile,business_segment) %>% summarise(
+  n_business = n(),
+  mount = sum(price),
+  every_mount = mount/n_business
+  )  %>% arrange(desc(lead_behaviour_profile))
+   
+table(A_1$lead_behaviour_profile) 
+```
+
+```{r}
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_9,aes(x=custlng,y=custlat,color=lead_behaviour_profile),size=0.2)
+
+ggplot() +
+  geom_polygon(data = Brazil, aes(x=long, y = lat, group = group), fill="gray")+
+  geom_point(data= M_9[M_9$lead_behaviour_profile=="wolf",],aes(x=custlng,y=custlat,color=lead_behaviour_profile),size=0.2)
+```
+#貨物與體積的關係
+```{r}
+v <- mutate(products, product_volume= product_length_cm*product_height_cm*product_width_cm)
+ggplot(v, aes(product_photos_qty, product_name_lenght))+ geom_point()
+ggplot(v, aes(product_volume))+ geom_bar()
+table(v$product_photos_qty) ##1 photo
+table(v$product_category_name, v$product_photos_qty)
+ggplot(v,aes(product_name_lenght))+ geom_bar()  ##左尾分布 集中在接近60
+ggplot(v,aes(product_description_lenght))+ geom_bar() ##右尾分布 集中在0~1000
+ggplot(v,aes(product_volume))+ geom_histogram(binwidth = 1500)
+by_name <- group_by(v,product_category_name) %>% summarise(avg = mean(product_volume)) %>% as.data.frame() ##貨物平均體積
+by_name <- by_name[-1,]
+product_category_name_translation.csv$product_category_name<- product_category_name_translation.csv$product_category_name
+
+m <- merge(by_name,product_category_name_translation.csv,all = F)
+m <- m[,-3]  ##貨物種類-平均體積
+
+```
+
+#三年熱賣前10大商品
+```{r}
+product_year=data.frame(year=format(M_8$order_purchase_timestamp,"%Y"),product=M_8$product_category_name_english)
+product2016=subset(product_year,year==2016)
+table16=table(product2016$product)
+product2017=subset(product_year,year==2017)
+table17=table(product2017$product)
+product2018=subset(product_year,year==2018)
+table18=table(product2018$product)
+table16=sort(table16,decreasing=TRUE) %>% head(10) #2016年銷售前10名
+table17=sort(table17,decreasing=TRUE) %>% head(10) #2017年銷售前10名
+
+pie(table16[1:5],main="2016")
+pie(table17[1:5],main="2017")
+pie(table18[1:5],main="2018")
+```
+
+#運費佔價格比例與評分的關聯
+```{r}
+#運費佔價格比例與評分的關聯，圖形上看起來，運費佔比越高，消費者對商品評價越低。但運費佔比與評價的相關係數很小
+M_15_4<-M_15_2[,-5]
+M_15_5=mutate(M_15_4,fdividep=freight_value/price)
+ggplot(M_15_5, aes(fdividep, review_score))+  
+geom_smooth(se = FALSE) 
+model=lm(M_15_5$fdivide~M_15_5$review_score) 
+summary(model)
+cor(M_15_5$fdivide,M_15_5$review_score)
+model=lm(M_15_5$freight_value~M_15_5$review_score) #運費高低與評價的相關係數也很小
+summary(model)
+cor(M_15_5$freight_value,M_15_5$review_score)
+
+summarise(filter(M_15_5, fdividep < 0.1 ),n())/112650      
+summarise(filter(filter(M_15_5, fdividep < 0.2), fdividep >= 0.1),n())/112650  
+summarise(filter(filter(M_15_5, fdividep < 0.3), fdividep >= 0.2),n())/112650 
+summarise(filter(filter(M_15_5, fdividep < 0.4), fdividep >= 0.3),n())/112650  
+summarise(filter(M_15_5, fdividep >= 0.4),n())/112650      
+hist(M_15_5$fdividep,las=2,freq=T,xlab="運費佔比",ylab="數量",main="運費佔比的數量")
+```
+
+#商品價格和評分的關係
+```{r}
+#商品價格和評分高低的關係。從圖型來看，大約超過3000元的商品，越貴評分越高越貴的商品評分越高。但商品價格和評分高低相關係數相當低，可推測兩者並無太大關連
+plot(M_15_1$price,M_15_1$review_score,main="", ylab="評分", xlab="價錢")
+ggplot(M_15_1, aes(price, review_score))+
+geom_smooth(se = FALSE) 
+model=lm(M_15_1$price~M_15_1$review_score) 
+summary(model)
+cor(M_15_1$price,M_15_1$review_score)
+```
+
+
+#不同月分的商品獲得5分評價的比例
+```{r}
+#不同月分的商品獲得5分評價的比例 : 可見7、8月商品評價較高
+t=as.Date(reviews$review_creation_date)
+score5<-filter(reviews, review_score ==5 )
+ts5=as.Date(score5$review_creation_date)
+table(format(ts5,'%m')) %>% sort()
+ratio5<-table(format(ts5,'%m'))/table(format(t,'%m'))
+ratio5
+```
+
