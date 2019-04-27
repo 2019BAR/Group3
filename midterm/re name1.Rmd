@@ -188,6 +188,16 @@ colnames(product_category_name_translation.csv) <- c("product_category_name","pr
 M_14_4 <- merge(M_14_3,product_category_name_translation.csv, by="product_category_name", all = F)
 table(M_14_4$product_category_name_english) %>% sort() ##消費量最多為bed_beath
 onece <- group_by(M_14_4, product_category_name_english) %>% summarise(mean=mean(price), sum=sum(price))##平均消費額最多為computers與總消費最多為health_beauty
+##以一次性消費顧客最大消費額的health_beauty去分析其分布特性
+health_beauty <- filter(M_14_4, product_category_name_english=="health_beauty")
+ggplot(health_beauty, aes(x=customer_state, y=price,col="grey")) +
+  geom_point(color="orange", size=4) + 
+  geom_segment( aes(x=customer_state, xend=customer_state, y=0, yend=price))+theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank()
+  )
 ```
 
 #####1-4.產品類別
