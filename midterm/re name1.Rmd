@@ -177,6 +177,7 @@ ggplot() +
 
 #####1-3.危機:一次性顧客過多
 ```{r}
+
 #抓出一次性購買消費者特性
 Q <- group_by(olist_customers_dataset.csv, customer_unique_id) %>% summarise(nid=n())
 Q <- filter(Q, nid==1) 
@@ -188,6 +189,12 @@ colnames(product_category_name_translation.csv) <- c("product_category_name","pr
 M_14_4 <- merge(M_14_3,product_category_name_translation.csv, by="product_category_name", all = F)
 table(M_14_4$product_category_name_english) %>% sort() ##消費量最多為bed_beath
 onece <- group_by(M_14_4, product_category_name_english) %>% summarise(mean=mean(price), sum=sum(price))##平均消費額最多為computers與總消費最多為health_beauty
+
+##顧客光顧幾次圓餅圖
+once <- table(M_14_3$customer_unique_id) %>% data.frame()
+ggplot(once)+geom_bar(aes(x=factor(1) ,fill=factor(Freq)
+                 )) + coord_polar(theta = "y")+ theme_void() +labs(title = "顧客銷售次數圓餅圖")
+
 ##以一次性消費顧客最大消費額的health_beauty去分析其分布特性
 health_beauty <- filter(M_14_4, product_category_name_english=="health_beauty")
 ggplot(health_beauty, aes(x=customer_state, y=price,col="grey")) +
