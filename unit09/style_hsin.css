@@ -1,0 +1,97 @@
+﻿
+.caption {
+  color: #777;
+  margin-top: 10px;
+}
+p code {
+  white-space: inherit;
+}
+pre {
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1;
+}
+pre code {
+  white-space: inherit;
+}
+p,li {
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
+
+.r{
+  line-height: 1.2;
+}
+
+.qiz {
+  line-height: 1.75;
+  background: #f0f0f0;
+  border-left: 12px solid #cce6ff;
+  padding: 4px;
+  padding-left: 10px;
+}
+
+.wiz {
+  line-height: 1.75;
+  background: #f0f0f0;
+  border-left: 12px solid #f5c7f7;
+  padding: 4px;
+  padding-left: 10px;
+}
+
+.eiz {
+  line-height: 1.75;
+  background: #f0f0f0;
+  border-left: 12px solid #ffc4d0;
+  padding: 4px;
+  padding-left: 10px;
+}
+
+.riz {
+  line-height: 1.75;
+  background: #f0f0f0;
+  border-left: 12px solid #58b3d3;
+  padding: 4px;
+  padding-left: 10px;
+}
+
+.wwl {
+  line-height: 1.75;
+  background: #f0f0f0;
+  border-left: 12px solid #ffeb99;
+  padding: 4px;
+  padding-left: 10px;
+}
+
+title{
+  color: #cc0000;
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
+
+body{
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
+
+h1,h2,h3,h4,h5{
+  color: #38598b;
+  font-family: "Trebuchet MS", "微軟正黑體", "Microsoft JhengHei";
+}
+
+h3{
+  color: #113f67;
+  background: #e7eaf6;
+  line-height: 2;
+  font-weight: bold;
+}
+
+h5{
+  color: #687eda;
+  background: #ffffe0;
+  line-height: 2;
+  font-weight: bold;
+}
+
+em{
+  color: #1d69d2;
+  background: #f0f0f0;
+  }
+

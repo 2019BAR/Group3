@@ -1,0 +1,171 @@
+---
+title: AS9-1 案例：航空公司的市場區隔
+author: 第三組 黃柏勳 劉漢慈 王誠歆 李燦宇 張延瑋 王欣
+date: "`r Sys.time()`"
+output: 
+  html_document:
+    highlight: pygments
+    theme: flatly
+    css: style_hsin.css
+---
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# 這些程式碼設定網頁的格式，並安裝、載入一些基本的套件，請大家不要去改動<br>
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=5, width=80)
+if(!require(pacman)) install.packages("pacman")
+```
+<br>
+
+<p class="wwl">
+<span style="font-size:24px">`r "\U1F4A1"` 學習重點：</span><br>
+&emsp; ■ 集群分析的基本觀念<br>
+&emsp; ■ 距離矩陣：Distance Matrix<br>
+&emsp; ■ 層級式集群分析：Hierarchical Cluster Analysis<br>
+&emsp; ■ 樹狀圖(Dendrogram)的判讀<br>
+&emsp; ■ 依據樹狀圖決定要分多少群<br>
+&emsp; ■ 以群組平均值檢視各族群的屬性<br>
+</p class="wwl">
+
+<hr>
+
+```{r results='hide', message=FALSE, warning=FALSE}
+pacman::p_load(dplyr, ggplot2)
+```
+<br>
+
+### 【A】航空公司顧客資料集
+
+```{r}
+A = read.csv('data/AirlinesCluster.csv')
+summary(A)
+```
+
++ Balance: 可用里程數
++ QualMiles: 可用高等里程數
++ BonusMiles: 過去12個月非飛行里程數
++ BonusTrans: 過去12個月非飛行交易次數
++ FlightMiles: 過去12個月飛行里程數
++ FlightTrans: 過去12個月飛行交易次數
++ DaysSinceEnroll: 會員年資 (天)
+
+
+<br><br>
+
+### 【B】資料常態化
+
+<span style="font-size:24px">`r "\U1F5FF"`</span>
+為甚麼要做資料常態化？<br>
+```{r}
+colMeans(A) %>% sort
+```
+
+```{r}
+AN = scale(A) %>% data.frame
+```
+
+```{r}
+sapply(AN, mean)
+```
+
+```{r}
+sapply(AN, sd)
+```
+
+<br><br>
+
+### 【C】層級式集群分析 Hirarchical Clustering  
+
+1.距離矩陣
+```{r}
+d = dist(AN, method="euclidean")
+```
+
+2.層級式集群分析
+```{r}
+hc = hclust(d, method='ward.D')
+```
+
+3.畫出樹狀圖
+```{r}
+plot(hc)
+```
+<br>
+<span style="font-size:24px">`r "\U1F5FF"`</span>
+如何從樹狀圖決定群數？<br>
+
+4.分割群組 
+```{r}
+kg = cutree(hc, k=5)
+table(kg)
+```
+
+<br><br>
+
+### 【D】觀察群組特性
+
+```{r}
+sapply(split(A,kg), colMeans) %>% round(2) 
+```
+
+```{r}
+par(cex=0.8)
+split(AN,kg) %>% sapply(colMeans) %>% barplot(beside=T,col=rainbow(7))
+legend('topright',legend=colnames(A),fill=rainbow(7))
+```
+
+<br><br>
+
+<p class="qiz">
+<span style="font-size:24px">`r "\U1F47C"` 討論問題：</span><br>
+&emsp; ■ 請你們為這五個族群各起一個名稱<br>
+&emsp; ■ 請你們為這五個族群各設計一個行銷策略<br>
+&emsp; ■ 統計上最好的分群也是實務上最好的分群嗎<br>
+&emsp; ■ 除了考慮群間和群間距離之外，實務上的分群通常還需要考慮那些因數？<br>
+</p class="qiz">
+
+<p class="wiz">
+<span style="font-size:24px">`r "\U1F478"` 小組答案(1)：</span><br>
+<font color="#8d309b" size="4px">族群一：睡美人</font><br>
+&emsp;在圖中的五個族群中，本族群註冊時間最長，但各項服務的應用較少，代表當初申請會員後，可能未能帶來實際價值。<br>
+<font color="#bd245f" >行銷策略：我們需要喚醒這些沉睡的用戶，可以通過定期的推送服務以及老用戶的回歸優惠服務來讓這些沉睡的顧客能夠重新應用航空服務，例如：第一波拿到優惠座位的優先權。</font><br>
+<font color="#8d309b" size="4px">族群二：阿拉丁公主－茉莉</font><br>
+&emsp;是五個族群中帶給公司最有價值的族群，在飛行累積里程數當中是所有族群最多的，其他表現也非常優異，所以是公司最需要保留的顧客。
+<br>
+<font color="#bd245f" >行銷策略：此族群對於飛行的需求很大，然後又不在意優惠資訊，我們可以對於此族群提供免費的到府的機場接送或是餐點免費升級，以服務取得此類顧客的信賴，以增加顧客忠誠度。</font><br>
+<font color="#8d309b" size="4px">族群三：美人魚公主－艾莉兒</font><br>
+&emsp;已經登記會員有一段時間，在額外累積里程數表現得最好，但在飛行里程數卻相對較少，可能玩樂行程豐富但不是有飛行需求的，以其他交通工具為替代，可能是郵輪。
+<br>
+<font color="#bd245f" >行銷策略：此族群對於飛航的需求本身可能較低，可以開發顧客的需求，例如旅行社一起開發機加酒或遊樂園套票優惠，刺激消費者買機票的誘因。</font><br>
+<font color="#8d309b" size="4px">族群四：灰姑娘</font><br>
+&emsp;可以看到本族群的飛行需求低於平均且申請會員相對晚，但是bonusMiles卻累積的比平均高，表示此族群可能是年輕小資族，喜歡透過其他消費來累積里程數，較精打細算。
+<br>
+<font color="#bd245f" >行銷策略：提供限時的歷程數優惠，這樣才能刺激這類顧客去利用他們的優惠歷程來換取優惠的價格折抵。</font><br>
+<font color="#8d309b" size="4px">族群五：白雪公主</font><br>
+&emsp;此族群因為各種數據低於平均值，代表可能不是為了飛行需求而申辦會員，可能因為被推銷而入會，屬於被動類型的消費者，比較沒主見、可能很容易被行銷到。
+<br>
+<font color="#bd245f" >行銷策略：此類族群的可能本身沒有需求，也沒有消費力，所以不會花太多成本在此族群，可能安排電訪廣告，以客製化來攏絡他們。</font><br>
+</p class="wiz">
+
+<p class="eiz">
+<span style="font-size:24px">`r "\U1F478"` 小組答案(2)：</span><br>
+統計上最好的分群未必是實務上最好的分群<br>
+實務上的分群可能需要考慮以下變數：<br>
+&emsp;1.行銷成本<br>
+&emsp;2.公司策略上的市場區隔及目標客群<br>
+&emsp;3.顧客使用行為的差異－例如：訂單管道可能來自不同網站<br>
+&emsp;4.顧客需求的淡旺季<br>
+</p class="eiz">
+
+<br><br><br><hr>
+
+
+
+
+
+
+
+
