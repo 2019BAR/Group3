@@ -1,5 +1,5 @@
 ---
-title: AS9-1 案例：航空公司的市場區隔:)
+title: AS9-1 案例：航空公司的市場區隔
 author: 第三組 黃柏勳 劉漢慈 王誠歆 李燦宇 張延瑋 王欣
 date: "`r Sys.time()`"
 output: 
@@ -152,7 +152,7 @@ legend('topright',legend=colnames(A),fill=rainbow(7))
 
 <p class="eiz">
 <span style="font-size:24px">`r "\U1F478"` 小組答案(2)：</span><br>
-統計上最好的分群未必是實務上最好的分群<br>
+統計上最好的分群未必是實務上最好的分群。<br>
 實務上的分群可能需要考慮以下變數：<br>
 &emsp;1.行銷成本<br>
 &emsp;2.公司策略上的市場區隔及目標客群<br>
