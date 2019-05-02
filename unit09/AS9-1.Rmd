@@ -1,5 +1,5 @@
 ---
-title: AS9-1 案例：航空公司的市場區隔
+title: AS9-1 案例：航空公司的市場區隔:)
 author: 第三組 黃柏勳 劉漢慈 王誠歆 李燦宇 張延瑋 王欣
 date: "`r Sys.time()`"
 output: 
