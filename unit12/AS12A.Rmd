@@ -193,7 +193,7 @@ What are the definiion of `logit` & `logistic function`? What is the relationshi
 &emsp;**，即得出logistic function**
 
 + 總結兩邊式子差異
-    + **Logistic Regression的左式是Logit(odd的對數)，右式是一个線性結構。**
+    + **Logistic Regression的左式是Logit(odd的對數)，右式是一個線性結構。**
     + **Logistic Function的左式是機率，右式是非線性的函數結構。**
 
 <span style="font-size:18px"> &emsp;&emsp; <font color="#913535">`r "\U2764"`最重要的是兩者可以互相轉換`r "\U2764"`</font></span>
