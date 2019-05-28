@@ -1,0 +1,159 @@
+---
+title: UNIT13C：類別模型、預測機率與商業決策 
+subtitle: ★預測與決策★
+author: 第三組 王欣 黃柏勳 劉漢慈 王誠歆 張延瑋 李燦宇 孫嘉力
+date: "`r Sys.time()`"
+output: 
+  html_document:
+    highlight: pygments
+    theme: flatly
+    css: style_hsin.css
+---
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# Formating Codes.  Do not change the codes in this chunk !!
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=5, width=80)
+if(!require(pacman)) install.packages("pacman")
+```
+<hr>
+
+```{r results='hide', message=FALSE, warning=FALSE}
+pacman::p_load(caTools, ggplot2, dplyr)
+D = read.csv("data/quality.csv")  # Read in dataset
+set.seed(88)
+split = sample.split(D$PoorCare, SplitRatio = 0.75)  # split vector
+TR = subset(D, split == TRUE)
+TS = subset(D, split == FALSE)
+glm1 = glm(PoorCare ~ OfficeVisits + Narcotics, TR, family=binomial)
+summary(glm1)
+```
+<br><hr>
+
+### 【A】從預測到決策
+
+<img src="Fig13.3.jpg" style="display:block; margin:auto; width:50%;">
+<div style="text-align:center;">Fig 13.3 - 從預測到決策</div>
+
+<br><hr>
+
+### 【B】預測機率分佈 (DPP)
+因為這個資料集很小，我們使用全部的資料來做模擬 (通常我們是使用測試資料集)
+```{r fig.height=3.2, fig.width=7, fig.align='center'}
+pred = predict(glm1, D, type="response")
+y = D$PoorCare
+data.frame(pred, y) %>% 
+  ggplot(aes(x=pred, fill=factor(y))) + 
+  geom_histogram(bins=20, col='white', position="stack", alpha=0.5) +
+  ggtitle("Distribution of Predicted Probability (DPP,FULL)") +
+  xlab("predicted probability")
+```
+<br><hr>
+
+### 【C】試算期望報酬
+
+**報酬矩陣 Payoff Matrix**
+
++ TN: NoAction, GoodCare; 沒事   
++ FN: NoAction, PoorCare; 風險成本很高 
++ FP: Action, GoodCare;   預防成本
++ TP: Action, PoorCare;   預防成本 + 降低後的風險成本
+
+```{r}
+payoff = matrix(c(0,-100,-10,-50),2,2)
+payoff
+```
+
+**期望報酬 Expected Payoff**
+```{r fig.height=3.2, fig.width=7, fig.align='center'}
+cutoff = seq(0, 1, 0.01)
+result = sapply(cutoff, function(p) sum(
+  table(factor(y==1, c(F,T)), factor(pred>p, c(F,T))) # confusion matrix
+  * payoff ))
+i = which.max(result)
+par(cex=0.7, mar=c(4,4,3,1))
+plot(cutoff, result, type='l', col='cyan', lwd=2, main=sprintf(
+  "Optomal Expected Result: $%d @ %.2f",result[i],cutoff[i]))
+abline(v=seq(0,1,0.1),h=seq(-6000,0,100),col='lightgray',lty=3)
+points(cutoff[i], result[i], pch=20, col='red', cex=2)
+```
+<br><hr>
+
+### 【D】策略模擬
+
+**使用`manipulate`套件做策略模擬**
+```{r eval=F}
+library(manipulate)
+manipulate({
+  payoff = matrix(c(TN,FN,FP,TP),2,2)
+  cutoff = seq(0, 1, 0.01)
+  result = sapply(cutoff, function(p) sum(
+    table(factor(y==1, c(F,T)), factor(pred>p, c(F,T))) # confusion matrix
+    * payoff ))
+  i = which.max(result)
+  par(cex=0.7)
+  plot(cutoff, result, type='l', col='cyan', lwd=2, main=sprintf(
+    "Optomal Expected Result: $%d @ %.2f",result[i],cutoff[i]))
+  abline(v=seq(0,1,0.1),h=seq(-10000,0,100),col='lightgray',lty=3)
+  points(cutoff[i], result[i], pch=20, col='red', cex=2)
+  },
+  TN = slider(-100,0,   0,step=5),
+  FN = slider(-100,0,-100,step=5),
+  FP = slider(-100,0, -10,step=5),
+  TP = slider(-100,0, -50,step=5)
+  ) 
+```
+<p class="riz">
+<span style="font-size:24px">`r "\U1F5FF"` 練習(1)： </span><br>
+執行`Sim13.R`，先依預設的報酬矩陣回答下列問題：<br>
+&emsp; 【A】 最佳臨界機率是？ 它所對應的期望報酬是多少？<br>
+&emsp; <font color="#124e96">最佳臨界機率是0.16，它所對應的報酬是-2360。</font><br>
+&emsp; 【B】 什麼都不做時，臨界機率和期望報酬各是多少？<br>
+&emsp; <font color="#124e96">當什麼都不做時，臨界機率會是1而期望報酬是-3300。</font><br>
+&emsp; 【C】 每位保戶都做時，臨界機率和期望報酬各是多少？<br>
+&emsp; <font color="#124e96">當每位保戶都做時，臨界機率會是0而報酬是-2630。</font><br>
+&emsp; 【D】 以上哪一種做法期的望報酬比較高？<br>
+&emsp; <font color="#124e96">A的期望報酬比較高</font><br>
+&emsp; 【E】 在所有的商務情境都是這種狀況嗎？<br>
+&emsp; <font color="#124e96">否，根據資料預測的情況、閾值(threshold)的設定、商業情境不同所造成的報酬矩陣差異都會有不同的最佳報酬，而所對應的最佳決策也會有所不同。</font><br>
+</p class="riz">
+
+<img src="P_1.png" style="display:block; margin:auto; width:70%;">
+
+<p class="wwl">
+<span style="font-size:24px">`r "\U1F5FF"` 練習(2)： </span><br>
+藉由調整報酬矩陣：<br>
+&emsp; 【F】 模擬出「全不做」比「全做」還要好的狀況<br>
+&emsp; <font color="#521477">如果要模擬出「全不做」比「全做」還要好的狀況，臨界值=1時的期望報酬就必須要比臨界值=0還要高。利用manipulate的工具，我們可以藉由降低TP和FP的報酬並提高TN和FN的報酬來達到這樣的效果。</font><br>
+&emsp; 【G】 並舉出一個會發生這種狀況的商務情境<br>
+&emsp; <font color="#521477">假設政府為補助產業各公司新的管理系統，有下列四種情況：<br>
+&emsp;&emsp; FN=-50(實際需要政府補助，但判定不用補助)<br>
+&emsp;&emsp; FP=-90(不需要補助，但政府給予補助)<br>
+&emsp;&emsp; TN=-40(不需要補助，政府也沒有給補助)<br>
+&emsp;&emsp; TP=0(需要補助， 政府也有給補助)<br>
+&emsp;依上列報酬矩陣，全不做會比全做的效果還要好。</font><br>
+</p class="wwl">
+
+|                      |   __Predict=0__   | __Predict=1__ |
+|  ------------------  | ---------- | ------------ |
+|  __Actual=0__  | `-40(TN)` |`-90(FP)` |
+|   __Actual=1__       | `-50(FN)` | `0(TP)`  |
+
+<p class="qiz">
+<span style="font-size:24px">`r "\U1F5FF"` 練習(3)： </span><br>
+有五種成本分別為`$5, $10, $15, $20, $30`的介入方法，它們分別可以將風險成本從`$100`降低到`$70, $60, $50, $40, $25` ...<br>
+**依原題意表示當模型預測為1時我們會採取介入方法，此時我們花費10元(FP)，可以將風險成本降為50(TP)。故本練習可以透過調整報酬矩陣的FP、TP來計算不同介入方法的期望報酬。**<br>
+&emsp; 【H】 它們的最佳期望報酬分別是多少？<br>
+&emsp; <font color="#eb4a5f">當成本為5元而風險成本是70元最佳期望報酬是-2695元</font><br>
+&emsp; <font color="#eb4a5f">當成本為10元而風險成本是60元最佳期望報酬是-2620元</font><br>
+&emsp; <font color="#eb4a5f">當成本為15元而風險成本是50元最佳期望報酬是-2505元</font><br>
+&emsp; <font color="#eb4a5f">當成本為20元而風險成本是40元最佳期望報酬是-2360元</font><br>
+&emsp; <font color="#eb4a5f">當成本為30元而風險成本是25元最佳期望報酬是-2160元</font><br>
+&emsp; 【I】 哪一種介入方法的最佳期望報酬是最大的呢？<br>
+&emsp; <font color="#eb4a5f">從以上的結果來看, 利用成本為30元而風險成本是25元時，獲得最佳的-2160的期望報酬，此時的cutoff為0.36。</font><br>
+</p class="qiz">
+
+<br><br><br><hr>

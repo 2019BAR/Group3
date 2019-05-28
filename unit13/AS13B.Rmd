@@ -1,0 +1,204 @@
+---
+title: UNIT13B：類別模型、預測機率與商業決策 
+subtitle: ★模型的準確性★
+author: 第三組 王欣 黃柏勳 劉漢慈 王誠歆 張延瑋 李燦宇 孫嘉力
+date: "`r Sys.time()`"
+output: 
+  html_document:
+    highlight: pygments
+    theme: flatly
+    css: style_hsin.css
+---
+
+```{r results='hide', message=FALSE, warning=FALSE, echo=F}
+# Formating Codes.  Do not change the codes in this chunk !!
+rm(list=ls(all=T))
+knitr::opts_chunk$set(comment = NA)
+knitr::opts_knit$set(global.par = TRUE)
+par(cex=0.8)
+options(scipen=20, digits=5, width=80)
+if(!require(pacman)) install.packages("pacman")
+```
+<hr>
+
+```{r results='hide', message=FALSE, warning=FALSE}
+pacman::p_load(caTools, ggplot2, dplyr)
+D = read.csv("data/quality.csv")  # Read in dataset
+set.seed(88)
+split = sample.split(D$PoorCare, SplitRatio = 0.75)  # split vector
+TR = subset(D, split == TRUE)
+TS = subset(D, split == FALSE)
+glm1 = glm(PoorCare ~ OfficeVisits + Narcotics, TR, family=binomial)
+summary(glm1)
+```
+<br><hr>
+
+
+### 【A】傳統準確性指標
+
+<img src="Fig13.1.jpg" style="display:block; margin:auto; width:50%;">
+<div style="text-align:center;">Fig 13.1 - 混淆矩陣與模型準確性指標</div>
+
+<br>
+
+##### Training Data
+
+**預測機率 Predicted Probability (Training)**
+```{r fig.height=3.2, fig.width=6.4, fig.align='center'}
+par(cex=0.8)
+pred = predict(glm1, type="response")
+hist(pred)
+abline(v=0.5, col='red')
+```
+
+**混淆矩陣 Confusion Matrix (Training)**
+```{r}
+cmx = table(Actual=TR$PoorCare, Predict=pred > 0.5)
+cmx
+```
+
+**模型準確性指標 Accuracy Matrices (Training)**
+```{r}
+A2x2 = function(x, k=3) c(
+  accuracy = sum(diag(x))/sum(x),
+  sensitivity = as.numeric(x[2,2]/rowSums(x)[2]),
+  specificity = as.numeric(x[1,1]/rowSums(x)[1])
+  ) %>% round(k)
+A2x2(cmx)
+```
+<br>
+
+##### Testing Data
+
+**預測機率 Predicted Probability (Testing)**
+```{r fig.height=3.2, fig.width=6.4, fig.align='center'}
+par(cex=0.8)
+pred2 = predict(glm1, newdata=TS, type="response")
+hist(pred2, 10)
+abline(v=0.5, col='red')
+```
+
+**混淆矩陣 Confusion Matrix (Testing)**
+```{r}
+cmx2 = table(Acture=TS$PoorCare, Predict=pred2 > 0.5)
+cmx2
+```
+
+**模型準確性指標 Accuracy Matrices (Testing)**
+```{r}
+sapply(list(Train=cmx, Test=cmx2), A2x2)
+```
+<br><br><hr>
+
+### 【B】預測機率分佈、臨界機率、混淆矩陣
+
+<img src="Fig13.2.jpg" style="display:block; margin:auto; width:50%;">
+<div style="text-align:center;">Fig 13.2 - 預測機率分佈、臨界機率、混淆矩陣</div>
+
+
+<br>
+
+**預測機率分佈 (DPP) - Distribution of Predicted Probability (Training)**
+```{r fig.height=3.2, fig.width=7, fig.align='center'}
+data.frame(y=factor(TR$PoorCare), pred=pred) %>% 
+  ggplot(aes(x=pred, fill=y)) + 
+  geom_histogram(bins=20, col='white', position="stack", alpha=0.5) +
+  ggtitle("Distribution of Predicted Probability (DPP)") +
+  xlab("predicted probability")
+```
+<br><br><br><hr>
+
+### 【C】作業曲線(ROC)與辨識率(AUC)
+
+**ROC - Receiver Operation Curve**
+```{r fig.height=4, fig.width=7.2, fig.align='center'}
+par(mfrow=c(1,2), cex=0.8)
+trAUC = colAUC(pred, y=TR$PoorCare, plotROC=T)
+tsAUC = colAUC(pred2, y=TS$PoorCare, plotROC=T)
+```
+
+**AUC - Area Under Curve**
+```{r}
+c(trAUC, tsAUC)
+```
+<br><hr>
+
+
+<span style="font-size:24px">`r "\U1F5FF"` 練習： </span><br>
+**使用`TR$MemberID`以外的所有欄位，建立一個邏輯式回歸模型來預測`PoorCare`**<br>
+
++ 重新建立模型
+```{r}
+glm2 = glm(PoorCare ~ .-MemberID, TR, family=binomial)
+summary(glm2)
+```
+
+<span style="color:#fb929e;background-color:#ffdfdf;font-size:18px">【A】 分別畫出Training和Testing的DPP</span>
+
+**Training Data**
+```{r fig.height=3.2, fig.width=7, fig.align='center'}
+par(cex=0.8)
+pred_1 = predict(glm2, type="response")
+data.frame(y=factor(TR$PoorCare), pred=pred_1) %>% 
+  ggplot(aes(x=pred, fill=y)) + 
+  geom_histogram(bins=20, col='white', position="stack", alpha=0.5) +
+  ggtitle("Distribution of Predicted Probability (DPP)") +
+  xlab("predicted probability")
+```
+
+**Testing Data**
+```{r fig.height=3.2, fig.width=7, fig.align='center'}
+pred_2 = predict(glm2, newdata=TS, type="response")
+data.frame(y=factor(TS$PoorCare), pred=pred_2) %>% 
+  ggplot(aes(x=pred, fill=y)) + 
+  geom_histogram(bins=20, col='white', position="stack", alpha=0.5) +
+  ggtitle("Distribution of Predicted Probability (DPP)") +
+  xlab("predicted probability")
+```
+
+<span style="color:#f1c550;background-color:#fdfdc4;font-size:18px">【B】 分別畫出Training和Testing的ROC</span>
+
+**ROC - Receiver Operation Curve**
+```{r fig.height=4, fig.width=7.2, fig.align='center'}
+par(mfrow=c(1,2), cex=0.8)
+trAUC = colAUC(pred_1, y=TR$PoorCare, plotROC=T)
+tsAUC = colAUC(pred_2, y=TS$PoorCare, plotROC=T)
+```
+
+<span style="color:#a1c45a;background-color:#edf0c7;font-size:18px">【C】 分別算出Training和Testing的ACC、SENS和SPEC</span>
+
+```{r}
+cmx_1 = table(Actual=TR$PoorCare, Predict=pred_1 > 0.5)
+cmx_2 = table(Actual=TS$PoorCare, Predict=pred_2 > 0.5)
+A2x2 = function(x, k=3) c(
+  accuracy = sum(diag(x))/sum(x),
+  sensitivity = as.numeric(x[2,2]/rowSums(x)[2]),
+  specificity = as.numeric(x[1,1]/rowSums(x)[1])
+  ) %>% round(k)
+sapply(list(Train=cmx_1, Test=cmx_2), A2x2)
+```
+<span style="color:#3b9a9c;background-color:#abedd8;font-size:18px">【D】 分別算出Training和Testing的AUC</span>
+
+```{r}
+c(trAUC, tsAUC)
+```
+
+<span style="color:#0278ae;background-color:#9bb4da;font-size:18px">【E】 跟用兩個預測變數的模型相比，這一個模型有比較準嗎？</span>
+
++ 判斷一個模型的準則可以透過AUC/AIC(類別)or R2(數量)/ACC及其他三大指標。
+    + AUC越接近1越好
+    + AIC越大越好
+    + ACC/Sens/Spec皆越大越好
++ 不確定每個訓練模型預測出來是否有過度適配(overfitting)問題；故在這兩個模型去判斷模型的準度時，一般我們使用測試集(Testing data)，來觀察上述的各指標。
+
+|                      |   __AUC__   | __AIC__ | __ACC__ | __Sens__ | __Spec__ |
+|  ------------------  | ---------- | ------------ | ------------ | ------------ | ------------ |
+|  __模型一(Testing)__  | __`0.79948`__ | __`95.14`__ | __`0.812`__ | __`0.375`__ | __`0.958`__ |
+|   __模型二(Testing)__ | <font color="#c70039">__`0.86458`__ |  <font color="#c70039">__`96.53`__  |  <font color="#c70039">__`0.844`__  |  <font color="#c70039">__`0.500`__  |  __`0.958`__  |
+
+
+<span style="color:#84577c;background-color:#f5e9ff;font-size:18px">【F】 為什麼它比較準(或比較不準)呢？</span>
+
++ 本組猜測因模型二變數變多，可以透過更多的資訊來有更精準預測的模型使得預測結果表現更好。
+
+<br><br><br><hr>
