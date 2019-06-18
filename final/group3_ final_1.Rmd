@@ -1,0 +1,151 @@
+---
+title: TaFeng_期末競賽
+author: 第三組 黃柏勳 劉漢慈 王誠歆 李燦宇 張延瑋 王欣
+date: "`r Sys.time()`"
+output:
+  html_document:
+    highlight: pygments
+    theme: flatly
+    css: style_hsin.css
+---
+
+
+### 模型訓練與測試流程
+
+<center>
+
+![Fig-1: The First Model](fig/modeling.jpg)
+</center>
+
+<hr>
+
+### Loading & Preparing Data
+```{r echo=T, message=F, cache=F, warning=F}
+pacman::p_load(dplyr,ggplot2,caTools)
+rm(list=ls(all=TRUE))
+Sys.setlocale("LC_TIME","C")
+load("data_g3/tf2_hsin.rdata")
+```
+
+##### Spliting for Classification 
+```{r}
+TR = subset(A, spl)
+TS = subset(A, !spl)
+```
+<br><hr>
+
+### Classification Model
+```{r}
+colnames(TR)
+glm1 = glm(buy ~ ., TR[,c(2:13,15:24,26)], family=binomial()) 
+summary(glm1)
+pred =  predict(glm1, TS, type="response")
+cm = table(actual = TS$buy, predict = pred > 0.5); cm
+acc.ts = cm %>% {sum(diag(.))/sum(.)}; acc.ts          # 0.69998
+colAUC(pred, TS$buy)                                   # 0.7556
+```
+<br><hr>
+
+### Regression Model
+```{r}
+A2 = subset(A, A$buy) %>% mutate_at(c("m","rev","amount"), log10)
+TR2 = subset(A2, spl2)
+TS2 = subset(A2, !spl2)
+```
+
+
+```{r}
+is.na(TR2) %>% colSums
+```
+```{r}
+sum(TR2$disrate>5)
+exp(3.565e-01)
+```
+
+```{r}
+colnames(TR2)
+lm1 = lm(amount ~ ., TR2[TR2$disrate<5,c(2:7,10:13,15:23,25)])
+summary(lm1)
+```
+
+```{r}
+r2.tr = summary(lm1)$r.sq
+SST = sum((TS2$amount - mean(TR2$amount))^ 2)
+SSE = sum((predict(lm1, TS2) -  TS2$amount)^2)
+r2.ts = 1 - (SSE/SST)
+c(r2.tr, r2.ts) #0.2881573 0.2749568
+
+```
+<br><hr>
+
+### Prediction
+```{r}
+load("data_g3/tf0_hsin.rdata")
+d0 = max(X0$date) + 1
+B = X0 %>% 
+  filter(date >= as.Date("2000-12-01")) %>% 
+  mutate(days = as.integer(difftime(d0, date, units="days"))) %>% 
+  group_by(cust) %>% summarise(
+    r = min(days),      # recency
+    s = max(days),      # seniority
+    f = n(),            # frquency
+    m = mean(total),    # monetary
+    rev = sum(total),   # total revenue contribution
+    raw = sum(gross),   # total gross profit contribution
+    age = age[1],       # age group
+    area = area[1],     # area code
+    h_1 = sum(h_1),
+    h_2 = sum(h_2),
+    h_3 = sum(h_3),
+    h_4 = sum(h_4),
+    ntimes = n_distinct(date),
+    prodratio=sum(prod)/ntimes,
+    T_loss = sum(Tloss),
+    Ave_qty = mean(items),            #顧客每一次品均購買數量
+    disrate = mean(total/Tcost),       #顧客品均帶來的獲利性
+    weekday=sum(wday=="平日"),  #該顧客在平日消費的總次數
+    meanweekday=mean(wday=="平日"),
+    weekend=sum(wday=="假日"),
+    meanweekend=mean(wday=="假日")
+  ) %>% data.frame      # 28584
+nrow(B)
+```
+
+```{r}
+B$oldage= B$age %in% c("a45","a50","a55","a60","a65")
+```
+
+```{r}
+STS = c("N1","N2","N3","N4","N5","N6","N7","N8")
+Status = function(f,meanweekday,meanweekend,r,age) {factor(
+  ifelse(B$f <= 1,
+         ifelse(B$r>24.85,"N1","N2"),
+         ifelse(abs(B$meanweekday-B$meanweekend)<0.2,
+                ifelse(B$oldage==1,"N3","N4"),
+                ifelse(B$meanweekday>=B$meanweekend,
+                  ifelse(B$oldage==1,"N5","N6"),
+                  ifelse(B$oldage==1,"N7","N8")))),STS)}
+B$Status = B %>% Status()
+```
+
+```{r}
+B$Buy = predict(glm1, B, type="response")
+```
+
+```{r}
+B$Rev = predict(lm1, B)
+```
+
+```{r fig.height=2.4, fig.width=7.2}
+par(mfrow=c(1,2), cex=0.8)
+hist(B$Buy)
+hist(log(B$Rev,10))
+```
+
+```{r}
+save(B, file="data_g3/tf3_hsin.rdata")
+```
+
+<br><br><hr><br><br>
+
+
